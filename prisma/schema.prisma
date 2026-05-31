@@ -1,0 +1,384 @@
+generator client {
+
+  provider = "prisma-client-js"
+
+}
+
+
+
+datasource db {
+
+  provider = "sqlite"
+
+  url      = env("DATABASE_URL")
+
+}
+
+
+
+enum UserRole {
+
+  STUDENT
+
+  TEACHER
+
+  COORDINATOR
+
+}
+
+
+
+enum TextDifficulty {
+
+  INICIANTE
+
+  INTERMEDIARIO
+
+  AVANCADO
+
+}
+
+
+
+enum ReadingErrorType {
+
+  OMISSAO
+
+  SUBSTITUICAO
+
+  HESITACAO
+
+}
+
+
+
+model School {
+
+  id        String   @id @default(cuid())
+
+  name      String
+
+  createdAt DateTime @default(now())
+
+  classes   Class[]
+
+  coordinators CoordinatorProfile[]
+
+}
+
+
+
+model Class {
+
+  id        String   @id @default(cuid())
+
+  name      String
+
+  grade     String?
+
+  accessCode String? @unique
+
+  schoolId  String
+
+  school    School   @relation(fields: [schoolId], references: [id])
+
+  students  StudentProfile[]
+
+  missions  Mission[]
+
+  goal      ClassGoal?
+
+  createdAt DateTime @default(now())
+
+}
+
+
+
+model ClassGoal {
+
+  id                   String @id @default(cuid())
+
+  classId              String @unique
+
+  class                Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  title                String @default("Meta da turma")
+
+  targetWeeklyReadings Int    @default(2)
+
+  minAccuracyPct       Float?
+
+  minWcpm              Float?
+
+  updatedAt            DateTime @updatedAt
+
+}
+
+
+
+model CoordinatorProfile {
+
+  id       String @id @default(cuid())
+
+  userId   String @unique
+
+  user     User   @relation(fields: [userId], references: [id])
+
+  schoolId String
+
+  school   School @relation(fields: [schoolId], references: [id])
+
+}
+
+
+
+model User {
+
+  id        String   @id @default(cuid())
+
+  email     String   @unique
+
+  passwordHash String
+
+  name      String
+
+  role      UserRole
+
+  createdAt DateTime @default(now())
+
+  student   StudentProfile?
+
+  teacher       TeacherProfile?
+
+  coordinator   CoordinatorProfile?
+
+}
+
+
+
+model StudentProfile {
+
+  id        String   @id @default(cuid())
+
+  userId    String   @unique
+
+  user      User     @relation(fields: [userId], references: [id])
+
+  classId   String
+
+  class     Class    @relation(fields: [classId], references: [id])
+
+  xp        Int      @default(0)
+
+  level     Int      @default(1)
+
+  comboStreak Int    @default(0)
+
+  privacyAcceptedAt      DateTime?
+
+  privacyPolicyVersion   String?
+
+  voiceConsentAt         DateTime?
+
+  voiceConsentGuardian   Boolean  @default(false)
+
+  sessions  ReadingSession[]
+
+  achievements StudentAchievement[]
+
+  missionProgress MissionProgress[]
+
+}
+
+
+
+model TeacherProfile {
+
+  id     String @id @default(cuid())
+
+  userId String @unique
+
+  user   User   @relation(fields: [userId], references: [id])
+
+}
+
+
+
+model ReadingText {
+
+  id          String         @id @default(cuid())
+
+  title       String
+
+  content     String
+
+  difficulty  TextDifficulty
+
+  gradeHint   String?
+
+  wordCount   Int
+
+  createdAt   DateTime       @default(now())
+
+  sessions    ReadingSession[]
+
+}
+
+
+
+model ReadingSession {
+
+  id               String   @id @default(cuid())
+
+  studentId        String
+
+  student          StudentProfile @relation(fields: [studentId], references: [id])
+
+  textId           String
+
+  text             ReadingText @relation(fields: [textId], references: [id])
+
+  startedAt        DateTime @default(now())
+
+  completedAt      DateTime?
+
+  durationSeconds  Int?
+
+  speedMultiplier  Float    @default(1)
+
+  omissions        Int      @default(0)
+
+  substitutions    Int      @default(0)
+
+  hesitations      Int      @default(0)
+
+  prosodyScore     Int?
+
+  accuracyPct      Float?
+
+  wcpm             Float?
+
+  score            Int?
+
+  xpEarned         Int?
+
+  spokenTranscript String?
+
+  asrSource        String?
+
+  errors           ReadingError[]
+
+}
+
+
+
+model ReadingError {
+
+  id        String           @id @default(cuid())
+
+  sessionId String
+
+  session   ReadingSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  type      ReadingErrorType
+
+  wordIndex Int?
+
+  note      String?
+
+  createdAt DateTime         @default(now())
+
+}
+
+
+
+model Achievement {
+
+  id          String   @id @default(cuid())
+
+  slug        String   @unique
+
+  title       String
+
+  description String
+
+  icon        String
+
+  students    StudentAchievement[]
+
+}
+
+
+
+model StudentAchievement {
+
+  id            String   @id @default(cuid())
+
+  studentId     String
+
+  student       StudentProfile @relation(fields: [studentId], references: [id])
+
+  achievementId String
+
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+
+  unlockedAt    DateTime @default(now())
+
+
+
+  @@unique([studentId, achievementId])
+
+}
+
+
+
+model Mission {
+
+  id          String   @id @default(cuid())
+
+  classId     String?
+
+  class       Class?   @relation(fields: [classId], references: [id])
+
+  title       String
+
+  description String
+
+  targetCount Int      @default(1)
+
+  minAccuracy Float?
+
+  xpReward    Int      @default(50)
+
+  activeFrom  DateTime @default(now())
+
+  activeUntil DateTime?
+
+  progress    MissionProgress[]
+
+}
+
+
+
+model MissionProgress {
+
+  id        String   @id @default(cuid())
+
+  missionId String
+
+  mission   Mission  @relation(fields: [missionId], references: [id])
+
+  studentId String
+
+  student   StudentProfile @relation(fields: [studentId], references: [id])
+
+  completed Int      @default(0)
+
+  done      Boolean  @default(false)
+
+
+
+  @@unique([missionId, studentId])
+
+}
+

@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --accent: #f59e0b;
+  --success: #10b981;
+  --card: #ffffff;
+  --muted: #64748b;
+  --highlight: #fef08a;
+  --highlight-active: #facc15;
+}
+
+[data-theme="high-contrast"] {
+  --background: #000000;
+  --foreground: #ffffff;
+  --primary: #ffff00;
+  --primary-hover: #ffea00;
+  --accent: #00ffff;
+  --success: #00ff00;
+  --card: #111111;
+  --muted: #cccccc;
+  --highlight: #ffffff;
+  --highlight-active: #ffff00;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+  --color-highlight: var(--highlight);
+  --color-highlight-active: var(--highlight-active);
+  --font-sans: var(--font-geist-sans);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #relatorio-print,
+  #relatorio-print * {
+    visibility: visible;
+  }
+  #relatorio-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+}

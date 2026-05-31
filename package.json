@@ -1,0 +1,47 @@
+{
+  "name": "karaoke-leitura",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "mobile"
+  ],
+  "scripts": {
+    "dev": "next dev",
+    "dev:mobile": "npm run start --workspace=mobile",
+    "build:mobile:android": "npm run build:android --workspace=mobile",
+    "build:mobile:android:preview": "npm run build:android:preview --workspace=mobile",
+    "submit:mobile:android": "npm run submit:android --workspace=mobile",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:reset": "prisma db push --force-reset && npm run db:seed",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:studio": "prisma studio",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@karaoke/shared": "*",
+    "@prisma/client": "^6.8.2",
+    "clsx": "^2.1.1",
+    "next": "^15.3.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "tailwind-merge": "^3.3.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "@tailwindcss/postcss": "^4.1.7",
+    "@types/node": "^22.15.21",
+    "@types/react": "^19.1.4",
+    "@types/react-dom": "^19.1.5",
+    "eslint": "^9.27.0",
+    "eslint-config-next": "^15.3.2",
+    "prisma": "^6.8.2",
+    "tailwindcss": "^4.1.7",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}
