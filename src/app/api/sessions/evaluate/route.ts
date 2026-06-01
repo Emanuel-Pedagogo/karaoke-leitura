@@ -66,9 +66,8 @@ export async function POST(request: Request) {
     });
   } catch (e) {
     console.error("Erro na API de avaliação com IA:", e);
-    return jsonWithCors(
-      { error: "Erro ao processar o áudio com a IA." },
-      { status: 500 }
-    );
+    const message =
+      e instanceof Error ? e.message : "Erro ao processar o áudio com a IA.";
+    return jsonWithCors({ error: message }, { status: 500 });
   }
 }

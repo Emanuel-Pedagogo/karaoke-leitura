@@ -61,6 +61,7 @@ export async function middleware(request: NextRequest) {
 
   if (
     (pathname === "/api/sessions" && request.method === "POST") ||
+    pathname === "/api/sessions/evaluate" ||
     pathname === "/api/reading/align" ||
     pathname === "/api/reading/transcribe" ||
     pathname === "/api/assistant" ||
@@ -95,6 +96,7 @@ export const config = {
     "/professor/:path*",
     "/api/student/me",
     "/api/sessions",
+    "/api/sessions/evaluate",
     "/api/reading/align",
     "/api/reading/transcribe",
     "/api/assistant",

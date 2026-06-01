@@ -34,6 +34,37 @@ export function VoiceAnalysisPanel({
     setLoading(true);
     setMessage(null);
     try {
+      // Preferir Gemini quando há áudio gravado durante a leitura
+      if (audioBlob) {
+        const form = new FormData();
+        form.append("audio", audioBlob, "leitura.webm");
+        form.append("textId", textId);
+        const geminiRes = await fetch("/api/sessions/evaluate", {
+          method: "POST",
+          body: form,
+          credentials: "include",
+        });
+        const geminiData = await geminiRes.json();
+        if (geminiRes.ok && geminiData.evaluation) {
+          const alignment = {
+            omissions: geminiData.evaluation.metrics?.omissions ?? 0,
+            substitutions: geminiData.evaluation.metrics?.substitutions ?? 0,
+            hesitations: geminiData.evaluation.metrics?.hesitations ?? 0,
+          };
+          setLastAlignment(alignment);
+          const heard = geminiData.evaluation.spokenTranscript as string | undefined;
+          setMessage(
+            heard
+              ? `Gemini: "${heard.slice(0, 80)}${heard.length > 80 ? "…" : ""}" — confira os contadores abaixo.`
+              : "Análise do Gemini concluída. Confira os contadores abaixo.",
+          );
+          return;
+        }
+        if (!geminiRes.ok) {
+          throw new Error(geminiData.error ?? "Erro na análise com Gemini");
+        }
+      }
+
       let finalTranscript = transcript.trim();
 
       if (!finalTranscript && audioBlob) {
@@ -42,6 +73,7 @@ export function VoiceAnalysisPanel({
         const tr = await fetch("/api/reading/transcribe", {
           method: "POST",
           body: form,
+          credentials: "include",
         });
         const trData = await tr.json();
         if (tr.ok && trData.transcript) {
@@ -54,13 +86,14 @@ export function VoiceAnalysisPanel({
 
       if (!finalTranscript) {
         throw new Error(
-          "Nenhuma fala detectada. Leia em voz alta ou configure OPENAI_API_KEY.",
+          "Nenhuma fala detectada. Ative o microfone na leitura ou leia em voz alta.",
         );
       }
 
       const res = await fetch("/api/reading/align", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ textId, transcript: finalTranscript }),
       });
       const data = await res.json();
@@ -77,7 +110,7 @@ export function VoiceAnalysisPanel({
 
   return (
     <Card className="border-primary/20 bg-primary/5 space-y-3">
-      <h3 className="font-semibold text-sm">🎤 Análise por voz (IA)</h3>
+      <h3 className="font-semibold text-sm">🎤 Análise por voz (Gemini)</h3>
       {listening && (
         <p className="text-xs text-primary animate-pulse">Ouvindo… fale o texto em voz alta.</p>
       )}

@@ -13,8 +13,10 @@ import { calculateSessionMetrics } from "@karaoke/shared";
 import { Card } from "@/components/Card";
 import { KaraokeReader } from "@/components/KaraokeReader";
 import { ManualEvaluationPanel } from "@/components/ManualEvaluationPanel";
-import { VoiceAnalyzeButton } from "@/components/VoiceAnalyzeButton";
+import { VoiceAnalysisPanel } from "@/components/VoiceAnalysisPanel";
+import { useReadingRecorder } from "@/hooks/useReadingRecorder";
 import {
+  fetchPrivacyStatus,
   fetchStudentProfile,
   fetchText,
   saveReadingSession,
@@ -44,6 +46,16 @@ export default function ReadingScreen() {
   const [metrics, setMetrics] = useState<ReturnType<
     typeof calculateSessionMetrics
   > | null>(null);
+  const [hasVoiceConsent, setHasVoiceConsent] = useState(false);
+  const [voiceMode, setVoiceMode] = useState(false);
+  const [spokenTranscript, setSpokenTranscript] = useState("");
+  const {
+    isRecording,
+    recordingUri,
+    start: startRecording,
+    stop: stopRecording,
+    reset: resetRecording,
+  } = useReadingRecorder();
   const startRef = useRef<number | null>(null);
   const durationRef = useRef(0);
 
@@ -53,13 +65,18 @@ export default function ReadingScreen() {
       setLoading(true);
       setError(null);
       try {
-        const [textData, studentData] = await Promise.all([
+        const [textData, studentData, privacy] = await Promise.all([
           fetchText(textId),
           fetchStudentProfile(),
+          fetchPrivacyStatus().catch(() => ({
+            needsPrivacy: false,
+            hasVoiceConsent: false,
+          })),
         ]);
         setText(textData);
         setStudentId(studentData?.id);
         setStudentName(studentData?.name ?? "Estudante");
+        setHasVoiceConsent(privacy.hasVoiceConsent);
       } catch (loadError) {
         setError(
           loadError instanceof Error
@@ -74,19 +91,26 @@ export default function ReadingScreen() {
     void loadScreenData();
   }, [textId]);
 
-  const handleStart = () => {
+  const handleStart = async () => {
     startRef.current = Date.now();
+    resetRecording();
+    if (voiceMode && hasVoiceConsent) {
+      await startRecording();
+    }
     setPhase("reading");
     setIsPlaying(true);
   };
 
-  const handleComplete = useCallback(() => {
+  const handleComplete = useCallback(async () => {
     setIsPlaying(false);
     if (startRef.current) {
       durationRef.current = Math.round((Date.now() - startRef.current) / 1000);
     }
+    if (isRecording) {
+      await stopRecording();
+    }
     setPhase("evaluate");
-  }, []);
+  }, [isRecording, stopRecording]);
 
   const handleFinish = async () => {
     if (!text) return;
@@ -110,6 +134,8 @@ export default function ReadingScreen() {
           speedMultiplier: speed,
           ...counts,
           prosodyScore: prosody,
+          spokenTranscript: spokenTranscript || undefined,
+          asrSource: spokenTranscript ? "gemini" : undefined,
           ...result,
         });
       } catch (saveError) {
@@ -173,26 +199,60 @@ export default function ReadingScreen() {
       </View>
 
       <Card style={styles.readerCard}>
+        {phase === "reading" && isRecording ? (
+          <Text style={styles.recordingHint}>🔴 Gravando sua leitura…</Text>
+        ) : null}
         <KaraokeReader
           content={text.content}
           speed={speed}
           isPlaying={isPlaying}
-          onComplete={handleComplete}
+          onComplete={() => void handleComplete()}
         />
       </Card>
 
       {phase === "ready" ? (
-        <Pressable onPress={handleStart} style={styles.primaryButton}>
-          <Text style={styles.primaryButtonText}>Iniciar leitura</Text>
-        </Pressable>
+        <View style={styles.readyBlock}>
+          {hasVoiceConsent ? (
+            <Pressable
+              style={styles.checkRow}
+              onPress={() => setVoiceMode(!voiceMode)}
+            >
+              <Text style={styles.checkMark}>{voiceMode ? "☑" : "☐"}</Text>
+              <Text style={styles.checkLabel}>
+                Usar microfone e análise automática (Gemini)
+              </Text>
+            </Pressable>
+          ) : (
+            <Text style={styles.voiceHint}>
+              Microfone desativado. Autorize em Privacidade na tela inicial ou
+              use avaliação manual.
+            </Text>
+          )}
+          <Pressable
+            onPress={() => void handleStart()}
+            style={styles.primaryButton}
+          >
+            <Text style={styles.primaryButtonText}>Iniciar leitura</Text>
+          </Pressable>
+        </View>
       ) : null}
 
       {phase === "evaluate" ? (
         <Card>
-          <VoiceAnalyzeButton
-            textId={text.id}
-            onApply={(a) => setCounts(a)}
-          />
+          {voiceMode && hasVoiceConsent ? (
+            <VoiceAnalysisPanel
+              textId={text.id}
+              recordingUri={recordingUri}
+              autoAnalyze={Boolean(recordingUri)}
+              onApply={(a, transcript) => {
+                setCounts(a);
+                if (transcript) setSpokenTranscript(transcript);
+              }}
+            />
+          ) : null}
+          {voiceMode && hasVoiceConsent ? (
+            <View style={{ height: spacing.md }} />
+          ) : null}
           <View style={{ height: spacing.md }} />
           <ManualEvaluationPanel
             counts={counts}
@@ -283,7 +343,19 @@ const styles = StyleSheet.create({
   readerCard: {
     minHeight: 220,
     justifyContent: "center",
+    gap: spacing.sm,
   },
+  recordingHint: {
+    textAlign: "center",
+    color: "#b91c1c",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  readyBlock: { gap: spacing.md },
+  checkRow: { flexDirection: "row", gap: spacing.sm, alignItems: "flex-start" },
+  checkMark: { fontSize: 18 },
+  checkLabel: { flex: 1, fontSize: 14, color: colors.foreground },
+  voiceHint: { fontSize: 13, color: colors.muted },
   primaryButton: {
     backgroundColor: colors.primary,
     borderRadius: radius.xl,
