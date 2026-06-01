@@ -12,6 +12,7 @@ import {
   evaluateAudioWithGemini,
   fetchPrivacyStatus,
 } from "@/lib/api";
+import { formatApiError } from "@/lib/format-api-error";
 import { colors, radius, spacing } from "@/lib/theme";
 
 type Alignment = {
@@ -78,8 +79,9 @@ export function VoiceAnalysisPanel({
       );
       onApply(alignment, result.evaluation.spokenTranscript);
     } catch (e) {
-      const msg =
-        e instanceof Error ? e.message : "Não foi possível analisar com o Gemini";
+      const msg = formatApiError(
+        e instanceof Error ? e.message : "Não foi possível analisar com o Gemini",
+      );
       setMessage(msg);
       Alert.alert("Erro na análise", msg);
     } finally {

@@ -91,6 +91,30 @@ Regras:
     return parsedResult;
   } catch (error) {
     console.error("Erro ao avaliar com Gemini:", error);
-    throw error;
+    throw new Error(formatGeminiError(error));
   }
+}
+
+/** Mensagem amigável para o app (evita JSON cru na tela). */
+export function formatGeminiError(error: unknown): string {
+  const raw =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : JSON.stringify(error);
+
+  if (
+    raw.includes("API_KEY_INVALID") ||
+    raw.includes("API key not valid") ||
+    raw.includes("GEMINI_API_KEY não configurada")
+  ) {
+    return "Chave do Gemini inválida ou ausente no servidor. Configure GEMINI_API_KEY na Vercel e faça Redeploy.";
+  }
+
+  if (raw.length > 200) {
+    return "Erro ao conectar com o Gemini. Verifique GEMINI_API_KEY no painel da Vercel.";
+  }
+
+  return raw;
 }
