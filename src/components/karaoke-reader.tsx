@@ -51,6 +51,7 @@ export function KaraokeReader({
     }, interval);
 
     return clearTimer;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying, speed, words.length, clearTimer, onWordChange, onComplete]);
 
   useEffect(() => {
