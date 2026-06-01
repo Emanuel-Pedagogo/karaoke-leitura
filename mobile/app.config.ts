@@ -36,6 +36,17 @@ const config: ExpoConfig = {
   experiments: {
     typedRoutes: true,
   },
+  updates: {
+    url: "https://u.expo.dev/cbce72da-a60b-49d8-b949-d18ca28851d8",
+  },
+  runtimeVersion: {
+    policy: "appVersion",
+  },
+  extra: {
+    eas: {
+      projectId: "cbce72da-a60b-49d8-b949-d18ca28851d8",
+    },
+  },
 };
 
 export default config;
