@@ -9,6 +9,10 @@ async function authHeaders() {
 async function parseJson<T>(response: Response): Promise<T> {
   const data = (await response.json()) as T;
   if (!response.ok) {
+    if (response.status === 401) {
+      await clearAuthToken();
+      throw new Error("AUTH_REQUIRED");
+    }
     const message =
       typeof data === "object" &&
       data !== null &&
