@@ -23,9 +23,12 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@google/genai": "^2.7.0",
     "@karaoke/shared": "*",
     "@prisma/client": "^6.8.2",
+    "@types/multer": "^2.1.0",
     "clsx": "^2.1.1",
+    "multer": "^2.1.1",
     "next": "^15.3.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Alert, Pressable, StyleSheet, Text } from "react-native";
 import { Audio } from "expo-av";
-import { alignReading, fetchPrivacyStatus, transcribeAudio } from "@/lib/api";
+import { evaluateAudioWithGemini, fetchPrivacyStatus } from "@/lib/api";
 import { colors, radius, spacing } from "@/lib/theme";
 
 type Props = {
@@ -47,25 +47,26 @@ export function VoiceAnalyzeButton({ textId, onApply }: Props) {
       setRecording(null);
       if (!uri) throw new Error("Gravação vazia");
 
-      let transcript = "";
-      try {
-        const tr = await transcribeAudio(uri);
-        transcript = tr.transcript;
-      } catch {
+      // Chama a nova API do Gemini no backend
+      const result = await evaluateAudioWithGemini(uri, textId);
+      
+      if (result.success && result.evaluation) {
+        onApply({
+          omissions: result.evaluation.metrics.omissions || 0,
+          substitutions: result.evaluation.metrics.substitutions || 0,
+          hesitations: result.evaluation.metrics.hesitations || 0,
+        });
         Alert.alert(
-          "Transcrição",
-          "Configure OPENAI_API_KEY no servidor ou cole o texto falado na web.",
+          "Análise Concluída", 
+          `O Gemini encontrou ${result.evaluation.errors.length} erro(s). Confirme na tabela abaixo!`
         );
-        return;
+      } else {
+        throw new Error("Erro na avaliação.");
       }
-
-      const result = await alignReading(textId, transcript);
-      onApply(result.alignment);
-      Alert.alert("Análise", result.disclaimer);
     } catch (e) {
       Alert.alert(
         "Erro",
-        e instanceof Error ? e.message : "Não foi possível analisar",
+        e instanceof Error ? e.message : "Não foi possível analisar o áudio com o Gemini",
       );
     } finally {
       setLoading(false);

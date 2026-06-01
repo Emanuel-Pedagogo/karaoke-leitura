@@ -1,5 +1,6 @@
 import { API_URL } from "./config";
 import { clearAuthToken, getAuthToken } from "./session";
+import type { ReadingErrorCounts } from "@karaoke/shared";
 
 async function authHeaders() {
   const token = await getAuthToken();
@@ -141,6 +142,31 @@ export async function transcribeAudio(uri: string) {
     body: form,
   });
   return parseJson<{ transcript: string; provider: string }>(response);
+}
+
+export async function evaluateAudioWithGemini(uri: string, textId: string) {
+  const form = new FormData();
+  form.append("audio", {
+    uri,
+    name: "leitura.m4a",
+    type: "audio/m4a",
+  } as unknown as Blob);
+  form.append("textId", textId);
+
+  const response = await fetch(`${API_URL}/api/sessions/evaluate`, {
+    method: "POST",
+    headers: await authHeaders(),
+    body: form,
+  });
+
+  return parseJson<{
+    success: boolean;
+    evaluation: {
+      spokenTranscript: string;
+      metrics: ReadingErrorCounts;
+      errors: Array<{ word: string; type: string }>;
+    };
+  }>(response);
 }
 
 export async function saveReadingSession(payload: {
