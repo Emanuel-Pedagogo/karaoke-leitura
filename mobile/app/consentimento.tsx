@@ -10,6 +10,7 @@ import {
 import { useRouter } from "expo-router";
 import { submitPrivacyConsent } from "@/lib/api";
 import { API_URL } from "@/lib/config";
+import { clearAuthToken } from "@/lib/session";
 import { colors, radius, spacing } from "@/lib/theme";
 
 export default function ConsentimentoScreen() {
@@ -37,9 +38,19 @@ export default function ConsentimentoScreen() {
         acceptVoice,
         guardianConfirmed: acceptVoice ? guardianConfirmed : false,
       });
-      router.replace("/");
+      router.replace("/home");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro");
+      const message = e instanceof Error ? e.message : "Erro";
+      if (
+        message === "AUTH_REQUIRED" ||
+        message.includes("Sessão inválida") ||
+        message.includes("Não autorizado")
+      ) {
+        await clearAuthToken();
+        router.replace("/welcome");
+        return;
+      }
+      setError(message);
     } finally {
       setLoading(false);
     }

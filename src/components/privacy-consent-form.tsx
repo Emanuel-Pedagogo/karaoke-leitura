@@ -29,7 +29,14 @@ export function PrivacyConsentForm() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Erro ao salvar");
+      if (!res.ok) {
+        if (res.status === 401) {
+          await fetch("/api/auth/logout", { method: "POST" });
+          window.location.href = "/login";
+          return;
+        }
+        throw new Error(data.error ?? "Erro ao salvar");
+      }
       router.push("/aluno");
       router.refresh();
     } catch (err) {

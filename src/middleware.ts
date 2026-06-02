@@ -75,6 +75,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  if (pathname === "/api/account" && request.method === "DELETE") {
+    if (!session?.userId) {
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    }
+    return NextResponse.next();
+  }
+
   if (
     (pathname.startsWith("/api/texts") && request.method !== "GET") ||
     (pathname === "/api/missions" && request.method === "POST") ||
@@ -110,6 +117,7 @@ export const config = {
     "/coordenador/:path*",
     "/api/class-goals",
     "/api/privacy/:path*",
+    "/api/account",
     "/api/class-requests/:path*",
   ],
 };

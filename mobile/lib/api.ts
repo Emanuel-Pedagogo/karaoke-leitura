@@ -69,6 +69,26 @@ export async function fetchPrivacyStatus() {
   }>(response);
 }
 
+export async function eraseVoiceData() {
+  const response = await fetch(`${API_URL}/api/privacy/erase-voice-data`, {
+    method: "POST",
+    headers: await authHeaders(),
+  });
+  return parseJson<{ ok: boolean; message?: string }>(response);
+}
+
+export async function deleteAccount() {
+  const response = await fetch(`${API_URL}/api/account`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      ...(await authHeaders()),
+    },
+    body: JSON.stringify({ confirm: "ENCERRAR" }),
+  });
+  return parseJson<{ ok: boolean; message?: string }>(response);
+}
+
 export async function submitPrivacyConsent(payload: {
   acceptPrivacy: boolean;
   acceptVoice: boolean;

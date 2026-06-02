@@ -95,6 +95,12 @@ export default async function ProfessorDashboardPage() {
           >
             Relatório
           </Link>
+          <Link
+            href="/professor/conta"
+            className="px-4 py-2 rounded-lg border border-foreground/20 text-sm hover:bg-foreground/5"
+          >
+            Minha conta
+          </Link>
         </div>
       </header>
 

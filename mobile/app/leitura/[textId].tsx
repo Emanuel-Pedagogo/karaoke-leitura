@@ -336,7 +336,7 @@ export default function ReadingScreen() {
           <Pressable onPress={handleTryAgain} style={styles.secondaryButton}>
             <Text style={styles.secondaryButtonText}>Tentar novamente</Text>
           </Pressable>
-          <Pressable onPress={() => router.replace("/")} style={styles.primaryButton}>
+          <Pressable onPress={() => router.replace("/home")} style={styles.primaryButton}>
             <Text style={styles.primaryButtonText}>Voltar ao início</Text>
           </Pressable>
         </Card>

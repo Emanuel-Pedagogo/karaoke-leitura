@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireStudentWithPrivacy } from "@/lib/privacy-guard";
 import { Card } from "@/components/ui/card";
+import { DeleteAccountButton } from "@/components/delete-account-button";
 import { EraseVoiceDataButton } from "@/components/erase-voice-data-button";
 
 export default async function MeusDadosPage() {
@@ -57,13 +58,13 @@ export default async function MeusDadosPage() {
         )}
       </Card>
 
-      <Card className="space-y-2 text-sm bg-foreground/5">
-        <h2 className="font-bold">Outros pedidos</h2>
+      <Card className="space-y-3 text-sm border-red-500/20">
+        <h2 className="font-bold text-red-800">Encerrar conta</h2>
         <p className="text-muted">
-          Para acesso, correção de nome, portabilidade ou exclusão total da conta,
-          solicite à <strong>secretaria da sua escola</strong> (controladora dos
-          dados).
+          Exclui permanentemente sua conta, histórico de leituras, XP, conquistas
+          e dados de voz. A turma e os textos da escola permanecem.
         </p>
+        <DeleteAccountButton redirectTo="/login" />
       </Card>
     </article>
   );

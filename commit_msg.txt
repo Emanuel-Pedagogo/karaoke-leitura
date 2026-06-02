@@ -1,9 +1,0 @@
-feat: class join requests, community ranking, and karaoke timing
-
-- Add ClassJoinRequest model for student-teacher workflow
-- Add APIs for joining classes via code and teacher invites
-- Add student TurmaScreen and teacher ClassRequestsManager UI
-- Add RankingScreen based on XP and combo streak
-- Refactor KaraokeReader to support punctuation-based pauses and proper resets
-- Improve Gemini AI evaluation prompt to return scores and feedback
-- Fix Windows SSL certificate error handling in local dev environment
