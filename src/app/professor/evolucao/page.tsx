@@ -1,21 +1,19 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
 import { requireTeacherSession } from "@/lib/auth-guard";
 import {
   getMonthlyEvolution,
   getWeeklyEvolution,
 } from "@/lib/pedagogy";
+import { getTeacherClassWithStudents } from "@/lib/teacher-class";
 import { EvolutionChart } from "@/components/evolution-chart";
 import { Card } from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
 
 export default async function EvolucaoPage() {
-  await requireTeacherSession();
+  const session = await requireTeacherSession();
 
-  const turma = await prisma.class.findFirst({
-    include: { school: true, students: { include: { user: true } } },
-  });
+  const turma = await getTeacherClassWithStudents(session.userId);
 
   if (!turma) {
     return <p className="text-muted">Nenhuma turma encontrada.</p>;

@@ -2,17 +2,16 @@ import Link from "next/link";
 import { requireTeacherSession } from "@/lib/auth-guard";
 import { getWeeklyRanking } from "@/lib/gamification";
 import { prisma } from "@/lib/prisma";
+import { getTeacherClass } from "@/lib/teacher-class";
 import { PrintReportButton } from "@/components/print-report-button";
 import { startOfWeek } from "@karaoke/shared";
 
 export const dynamic = "force-dynamic";
 
 export default async function RelatorioPage() {
-  await requireTeacherSession();
+  const session = await requireTeacherSession();
 
-  const turma = await prisma.class.findFirst({
-    include: { school: true },
-  });
+  const turma = await getTeacherClass(session.userId);
 
   if (!turma) {
     return <p className="text-muted">Nenhuma turma encontrada.</p>;

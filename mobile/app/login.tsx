@@ -8,7 +8,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { API_URL } from "@/lib/config";
 import { setAuthToken } from "@/lib/session";
 import { colors, radius, spacing } from "@/lib/theme";
@@ -19,8 +19,8 @@ type ClassStudent = { id: string; name: string };
 export default function LoginScreen() {
   const router = useRouter();
   const [mode, setMode] = useState<LoginMode>("email");
-  const [email, setEmail] = useState("aluno@demo.local");
-  const [password, setPassword] = useState("aluno123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [classCode, setClassCode] = useState("");
   const [className, setClassName] = useState("");
   const [students, setStudents] = useState<ClassStudent[]>([]);
@@ -176,7 +176,6 @@ export default function LoginScreen() {
               <Text style={styles.buttonText}>Entrar</Text>
             )}
           </Pressable>
-          <Text style={styles.demo}>Demo: aluno@demo.local / aluno123</Text>
         </>
       ) : (
         <>
@@ -185,7 +184,7 @@ export default function LoginScreen() {
             value={classCode}
             onChangeText={(text) => setClassCode(text.toUpperCase())}
             autoCapitalize="characters"
-            placeholder="Código da turma (ex: TURMA3A)"
+            placeholder="Código da turma"
             placeholderTextColor={colors.muted}
           />
           <Pressable
@@ -245,11 +244,16 @@ export default function LoginScreen() {
               <Text style={styles.buttonText}>Entrar como aluno</Text>
             )}
           </Pressable>
-          <Text style={styles.demo}>Demo: código TURMA3A</Text>
         </>
       )}
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
+
+      <Link href="/cadastro" asChild>
+        <Pressable style={styles.link}>
+          <Text style={styles.linkText}>Não tem conta? Criar conta</Text>
+        </Pressable>
+      </Link>
     </ScrollView>
   );
 }
@@ -307,12 +311,6 @@ const styles = StyleSheet.create({
   secondaryButtonText: { color: colors.primary, fontWeight: "600" },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: "#fff", fontWeight: "700" },
-  demo: {
-    marginTop: spacing.lg,
-    fontSize: 12,
-    color: colors.muted,
-    textAlign: "center",
-  },
   classLabel: { fontSize: 14, color: colors.muted, marginBottom: spacing.md },
   className: { fontWeight: "700", color: colors.foreground },
   studentList: { marginBottom: spacing.md, gap: spacing.sm },
@@ -334,5 +332,7 @@ const styles = StyleSheet.create({
   },
   studentItemText: { color: colors.foreground, fontSize: 15 },
   studentItemTextSelected: { color: colors.primary, fontWeight: "700" },
+  link: { marginTop: spacing.lg, alignItems: "center" },
+  linkText: { color: colors.primary, fontWeight: "600" },
 });
 

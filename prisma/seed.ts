@@ -52,6 +52,18 @@ async function main() {
     },
   });
 
+  const professorUser = await prisma.user.findUnique({
+    where: { email: "professor@demo.local" },
+    include: { teacher: true },
+  });
+
+  if (professorUser?.teacher) {
+    await prisma.class.update({
+      where: { id: turma.id },
+      data: { teacherId: professorUser.teacher.id },
+    });
+  }
+
   await prisma.user.upsert({
     where: { email: "coordenador@demo.local" },
     update: { passwordHash: coordHash },

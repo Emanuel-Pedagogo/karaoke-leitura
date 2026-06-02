@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getSessionFromRequest } from "@/lib/auth";
+import { getTeacherClass } from "@/lib/teacher-class";
 
 export async function POST(request: Request) {
   const session = await getSessionFromRequest(request);
@@ -28,7 +29,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const turma = await prisma.class.findFirst();
+    const turma = await getTeacherClass(session.userId);
     if (!turma) {
       return Response.json({ error: "Nenhuma turma cadastrada" }, { status: 400 });
     }

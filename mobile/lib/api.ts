@@ -109,6 +109,31 @@ export async function fetchText(textId: string) {
   return data.text;
 }
 
+export async function registerAccount(payload: {
+  role: "STUDENT" | "TEACHER";
+  name: string;
+  email: string;
+  password: string;
+  classCode?: string;
+  schoolName?: string;
+  className?: string;
+}) {
+  const response = await fetch(`${API_URL}/api/auth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return parseJson<{
+    ok: boolean;
+    role: string;
+    name: string;
+    token: string;
+    classCode?: string;
+    className?: string;
+    error?: string;
+  }>(response);
+}
+
 export async function alignReading(textId: string, transcript: string) {
   const response = await fetch(`${API_URL}/api/reading/align`, {
     method: "POST",

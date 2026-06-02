@@ -1,18 +1,16 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
 import { requireTeacherSession } from "@/lib/auth-guard";
 import { getClassGoalProgress } from "@/lib/pedagogy";
+import { getTeacherClassWithGoal } from "@/lib/teacher-class";
 import { ClassGoalForm } from "@/components/class-goal-form";
 import { Card } from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
 
 export default async function MetasPage() {
-  await requireTeacherSession();
+  const session = await requireTeacherSession();
 
-  const turma = await prisma.class.findFirst({
-    include: { school: true, goal: true },
-  });
+  const turma = await getTeacherClassWithGoal(session.userId);
 
   if (!turma) {
     return <p className="text-muted">Nenhuma turma encontrada.</p>;

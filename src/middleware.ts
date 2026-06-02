@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth-session";
 
-const PUBLIC_PATHS = ["/", "/login", "/privacidade"];
+const PUBLIC_PATHS = ["/", "/login", "/cadastro", "/privacidade"];
 
 async function getSession(request: NextRequest) {
   const token =

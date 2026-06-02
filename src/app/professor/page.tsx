@@ -1,32 +1,18 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
 import { requireTeacherSession } from "@/lib/auth-guard";
 import {
   getClassGoalProgress,
   getParticipationAlerts,
 } from "@/lib/pedagogy";
+import { getTeacherClassDashboard } from "@/lib/teacher-class";
 import { Card } from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProfessorDashboardPage() {
-  await requireTeacherSession();
+  const session = await requireTeacherSession();
 
-  const turma = await prisma.class.findFirst({
-    include: {
-      school: true,
-      goal: true,
-      students: {
-        include: {
-          user: true,
-          sessions: {
-            where: { completedAt: { not: null } },
-            orderBy: { completedAt: "desc" },
-          },
-        },
-      },
-    },
-  });
+  const turma = await getTeacherClassDashboard(session.userId);
 
   const students = turma?.students ?? [];
   const classId = turma?.id ?? "";
@@ -65,6 +51,12 @@ export default async function ProfessorDashboardPage() {
           <p className="text-muted">
             {turma?.school.name} · {turma?.name ?? "—"}
           </p>
+          {turma?.accessCode ? (
+            <p className="text-sm mt-2">
+              Código da turma para alunos:{" "}
+              <strong className="text-primary">{turma.accessCode}</strong>
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
           <Link

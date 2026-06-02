@@ -22,10 +22,16 @@ export default function HomePage() {
             Leituras interativas, XP, missões, ranking e conquistas.
           </p>
           <Link
-            href="/login"
+            href="/cadastro"
             className="inline-block px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-hover"
           >
-            Entrar como aluno
+            Criar conta de aluno
+          </Link>
+          <Link
+            href="/login"
+            className="inline-block ml-2 px-4 py-2 rounded-lg border border-primary text-primary hover:bg-primary/10"
+          >
+            Já tenho conta
           </Link>
         </Card>
         <Card>
@@ -34,10 +40,16 @@ export default function HomePage() {
             Dashboard da turma, evolução individual e relatórios.
           </p>
           <Link
-            href="/login"
+            href="/cadastro"
             className="inline-block px-4 py-2 rounded-lg border border-primary text-primary hover:bg-primary/10"
           >
-            Entrar como professor
+            Criar conta de professor
+          </Link>
+          <Link
+            href="/login"
+            className="inline-block ml-2 px-4 py-2 rounded-lg border border-foreground/20 hover:bg-foreground/5"
+          >
+            Já tenho conta
           </Link>
         </Card>
       </section>

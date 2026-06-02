@@ -135,7 +135,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-foreground/20 px-3 py-2 bg-background"
-                placeholder="aluno@demo.local"
+                placeholder="voce@email.com"
               />
             </label>
             <label className="block text-sm">
@@ -155,10 +155,6 @@ export default function LoginPage() {
             >
               {loading ? "Entrando…" : "Entrar"}
             </button>
-            <p className="text-xs text-muted">
-              Demo: aluno@demo.local / aluno123 · professor@demo.local /
-              professor123 · coordenador@demo.local / coord123
-            </p>
           </form>
         ) : (
           <form onSubmit={handleClassLogin} className="space-y-4">
@@ -170,7 +166,7 @@ export default function LoginPage() {
                 value={classCode}
                 onChange={(e) => setClassCode(e.target.value.toUpperCase())}
                 className="mt-1 w-full rounded-lg border border-foreground/20 px-3 py-2 bg-background uppercase"
-                placeholder="TURMA3A"
+                placeholder="Código da turma"
               />
             </label>
             <button
@@ -210,7 +206,6 @@ export default function LoginPage() {
             >
               {loading ? "Entrando…" : "Entrar como aluno"}
             </button>
-            <p className="text-xs text-muted">Demo: código TURMA3A</p>
           </form>
         )}
 
@@ -220,6 +215,13 @@ export default function LoginPage() {
           </p>
         )}
       </Card>
+
+      <p className="text-center text-sm">
+        Não tem conta?{" "}
+        <Link href="/cadastro" className="text-primary hover:underline">
+          Criar conta
+        </Link>
+      </p>
 
       <p className="text-center text-sm">
         <Link href="/" className="text-primary hover:underline">

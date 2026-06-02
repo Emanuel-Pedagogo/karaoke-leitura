@@ -82,6 +82,10 @@ model Class {
 
   school    School   @relation(fields: [schoolId], references: [id])
 
+  teacherId String?
+
+  teacher   TeacherProfile? @relation(fields: [teacherId], references: [id])
+
   students  StudentProfile[]
 
   missions  Mission[]
@@ -199,6 +203,8 @@ model TeacherProfile {
   userId String @unique
 
   user   User   @relation(fields: [userId], references: [id])
+
+  classes Class[]
 
 }
 
