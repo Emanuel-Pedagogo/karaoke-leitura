@@ -14,10 +14,11 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: colors.background },
         }}
       >
+        <Stack.Screen name="welcome" options={{ headerShown: false }} />
         <Stack.Screen name="login" options={{ title: "Entrar" }} />
         <Stack.Screen name="cadastro" options={{ title: "Criar conta" }} />
         <Stack.Screen name="consentimento" options={{ title: "Privacidade" }} />
-        <Stack.Screen name="index" options={{ title: "Karaokê de Leitura" }} />
+        <Stack.Screen name="index" options={{ title: "Início" }} />
         <Stack.Screen
           name="leitura/[textId]"
           options={{ title: "Leitura" }}

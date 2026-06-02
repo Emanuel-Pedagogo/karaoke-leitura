@@ -58,7 +58,7 @@ export default function CadastroScreen() {
     >
       <Text style={styles.title}>Criar conta</Text>
       <Text style={styles.subtitle}>
-        Cadastre-se como aluno para usar o aplicativo.
+        Preencha seus dados para começar a ler.
       </Text>
 
       <TextInput
@@ -122,6 +122,12 @@ export default function CadastroScreen() {
       <Link href="/login" asChild>
         <Pressable style={styles.link}>
           <Text style={styles.linkText}>Já tem conta? Entrar</Text>
+        </Pressable>
+      </Link>
+
+      <Link href="/welcome" asChild>
+        <Pressable style={styles.link}>
+          <Text style={styles.linkText}>← Voltar</Text>
         </Pressable>
       </Link>
     </ScrollView>

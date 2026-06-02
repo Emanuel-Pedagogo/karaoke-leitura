@@ -34,7 +34,7 @@ export async function SiteHeader() {
           </Link>
         )}
         {!session && (
-          <Link href="/login" className="hover:text-primary transition-colors">
+          <Link href="/entrar" className="hover:text-primary transition-colors">
             Entrar
           </Link>
         )}

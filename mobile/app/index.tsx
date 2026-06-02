@@ -1,16 +1,14 @@
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
-  FlatList,
   Pressable,
-  RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { DIFFICULTY_LABELS } from "@karaoke/shared";
-import { Card } from "@/components/Card";
 import {
   fetchPrivacyStatus,
   fetchStudentProfile,
@@ -18,7 +16,7 @@ import {
   type ReadingTextSummary,
   type StudentProfile,
 } from "@/lib/api";
-import { API_URL } from "@/lib/config";
+import { getAuthToken } from "@/lib/session";
 import { colors, radius, spacing } from "@/lib/theme";
 
 export default function HomeScreen() {
@@ -26,12 +24,17 @@ export default function HomeScreen() {
   const [student, setStudent] = useState<StudentProfile | null>(null);
   const [texts, setTexts] = useState<ReadingTextSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     setError(null);
     try {
+      const token = await getAuthToken();
+      if (!token) {
+        router.replace("/welcome");
+        return;
+      }
+
       const privacy = await fetchPrivacyStatus();
       if (privacy.needsPrivacy) {
         router.replace("/consentimento");
@@ -49,217 +52,176 @@ export default function HomeScreen() {
         loadError instanceof Error &&
         loadError.message === "AUTH_REQUIRED"
       ) {
-        router.replace("/login");
+        router.replace("/welcome");
         return;
       }
       setError(
         loadError instanceof Error
           ? loadError.message
-          : "Não foi possível carregar os dados",
+          : "Não foi possível carregar. Tente de novo.",
       );
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }, [router]);
 
   useFocusEffect(
     useCallback(() => {
+      setLoading(true);
       void loadData();
     }, [loadData]),
   );
+
+  const firstText = texts[0];
 
   if (loading) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Carregando...</Text>
       </View>
     );
   }
 
   return (
-    <FlatList
+    <ScrollView
       style={styles.screen}
       contentContainerStyle={styles.content}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={() => {
-            setRefreshing(true);
-            void loadData();
-          }}
-        />
-      }
-      ListHeaderComponent={
-        <View style={styles.headerBlock}>
-          <Text style={styles.greeting}>
-            Olá, {student?.name ?? "Estudante"}!
-          </Text>
-          <Text style={styles.subtitle}>
-            {student?.className ?? "Turma demo"}
-          </Text>
+    >
+      <Text style={styles.greeting}>
+        Olá, {student?.name?.split(" ")[0] ?? "leitor"}!
+      </Text>
+      {student?.className ? (
+        <Text style={styles.subtitle}>{student.className}</Text>
+      ) : null}
 
-          {error ? (
-            <Card style={styles.errorCard}>
-              <Text style={styles.errorTitle}>Não consegui conectar ao servidor</Text>
-              <Text style={styles.errorText}>{error}</Text>
-              <Text style={styles.errorHint}>
-                Verifique se o site está rodando com `npm run dev` e se a URL da API
-                está correta: {API_URL}
-              </Text>
-            </Card>
-          ) : null}
-
-          <View style={styles.statsRow}>
-            <Card style={styles.statCard}>
-              <Text style={styles.statLabel}>Nível</Text>
-              <Text style={[styles.statValue, styles.statPrimary]}>
-                {student?.level ?? 1}
-              </Text>
-            </Card>
-            <Card style={styles.statCard}>
-              <Text style={styles.statLabel}>XP</Text>
-              <Text style={styles.statValue}>{student?.xp ?? 0}</Text>
-              <View style={styles.progressTrack}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    { width: `${student?.xpProgress.percent ?? 0}%` },
-                  ]}
-                />
-              </View>
-            </Card>
-            <Card style={styles.statCard}>
-              <Text style={styles.statLabel}>Combo</Text>
-              <Text style={[styles.statValue, styles.statAccent]}>
-                {student?.comboStreak ?? 0}
-              </Text>
-            </Card>
-          </View>
-
-          <Text style={styles.sectionTitle}>Escolha um texto</Text>
+      {error ? (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorText}>{error}</Text>
+          <Pressable onPress={() => void loadData()} style={styles.retryButton}>
+            <Text style={styles.retryText}>Tentar de novo</Text>
+          </Pressable>
         </View>
-      }
-      data={texts}
-      keyExtractor={(item) => item.id}
-      renderItem={({ item }) => (
+      ) : null}
+
+      {!error && firstText ? (
         <Pressable
-          onPress={() => router.push(`/leitura/${item.id}`)}
-          style={({ pressed }) => [
-            styles.textItem,
-            pressed && styles.textItemPressed,
-          ]}
+          style={styles.heroCard}
+          onPress={() => router.push(`/leitura/${firstText.id}`)}
         >
-          <Text style={styles.textTitle}>{item.title}</Text>
-          <Text style={styles.textMeta}>
-            {DIFFICULTY_LABELS[item.difficulty] ?? item.difficulty} ·{" "}
-            {item.wordCount} palavras
-            {item.gradeHint ? ` · ${item.gradeHint}` : ""}
+          <Text style={styles.heroLabel}>Próxima leitura</Text>
+          <Text style={styles.heroTitle}>{firstText.title}</Text>
+          <Text style={styles.heroMeta}>
+            {DIFFICULTY_LABELS[firstText.difficulty] ?? firstText.difficulty} ·{" "}
+            {firstText.wordCount} palavras
           </Text>
-        </Pressable>
-      )}
-      ListEmptyComponent={
-        !error ? (
-          <Text style={styles.emptyText}>
-            Nenhum texto cadastrado. Rode `npm run db:seed` no computador.
-          </Text>
-        ) : null
-      }
-      ListFooterComponent={
-        student && student.recentSessions.length > 0 ? (
-          <View style={styles.historyBlock}>
-            <Text style={styles.sectionTitle}>Histórico recente</Text>
-            {student.recentSessions.map((session) => (
-              <View key={session.id} style={styles.historyRow}>
-                <Text style={styles.historyTitle}>{session.textTitle}</Text>
-                <Text style={styles.historyMeta}>
-                  {session.accuracyPct != null ? `${session.accuracyPct}%` : "—"} ·{" "}
-                  {session.wcpm != null ? `${session.wcpm} WCPM` : "—"}
-                </Text>
-              </View>
-            ))}
+          <View style={styles.heroButton}>
+            <Text style={styles.heroButtonText}>Começar agora →</Text>
           </View>
-        ) : null
-      }
-    />
+        </Pressable>
+      ) : null}
+
+      {student ? (
+        <Text style={styles.xpLine}>
+          Nível {student.level} · {student.xp} pontos
+        </Text>
+      ) : null}
+
+      {texts.length > 1 ? (
+        <View style={styles.listSection}>
+          <Text style={styles.listTitle}>Outros textos</Text>
+          {texts.slice(1).map((item) => (
+            <Pressable
+              key={item.id}
+              style={styles.textItem}
+              onPress={() => router.push(`/leitura/${item.id}`)}
+            >
+              <Text style={styles.textTitle}>{item.title}</Text>
+              <Text style={styles.textMeta}>
+                {DIFFICULTY_LABELS[item.difficulty] ?? item.difficulty} ·{" "}
+                {item.wordCount} palavras
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+
+      {!error && texts.length === 0 ? (
+        <Text style={styles.empty}>
+          Ainda não há textos disponíveis. Peça ao professor para cadastrar.
+        </Text>
+      ) : null}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: spacing.md,
-    gap: spacing.md,
-    paddingBottom: spacing.xl,
-  },
+  screen: { flex: 1, backgroundColor: colors.background },
+  content: { padding: spacing.lg, paddingBottom: spacing.xl },
   centered: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.background,
-    gap: spacing.md,
-  },
-  loadingText: {
-    color: colors.muted,
-  },
-  headerBlock: {
-    gap: spacing.md,
-    marginBottom: spacing.sm,
   },
   greeting: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: "700",
     color: colors.foreground,
   },
   subtitle: {
+    fontSize: 15,
     color: colors.muted,
+    marginTop: spacing.xs,
+    marginBottom: spacing.lg,
   },
-  statsRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
+  heroCard: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
   },
-  statCard: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: spacing.md,
-  },
-  statLabel: {
-    fontSize: 11,
+  heroLabel: {
+    color: "rgba(255,255,255,0.85)",
+    fontSize: 13,
+    fontWeight: "600",
     textTransform: "uppercase",
-    color: colors.muted,
+    letterSpacing: 0.5,
   },
-  statValue: {
-    fontSize: 28,
+  heroTitle: {
+    color: "#fff",
+    fontSize: 22,
     fontWeight: "700",
     marginTop: spacing.xs,
   },
-  statPrimary: {
-    color: colors.primary,
+  heroMeta: {
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 14,
+    marginTop: spacing.xs,
   },
-  statAccent: {
-    color: colors.accent,
-  },
-  progressTrack: {
-    width: "100%",
-    height: 8,
-    backgroundColor: "rgba(15, 23, 42, 0.1)",
+  heroButton: {
+    marginTop: spacing.lg,
+    backgroundColor: "#fff",
     borderRadius: radius.md,
-    marginTop: spacing.sm,
-    overflow: "hidden",
+    paddingVertical: spacing.md,
+    alignItems: "center",
   },
-  progressFill: {
-    height: "100%",
-    backgroundColor: colors.primary,
-  },
-  sectionTitle: {
-    fontSize: 20,
+  heroButtonText: {
+    color: colors.primary,
     fontWeight: "700",
+    fontSize: 16,
+  },
+  xpLine: {
+    textAlign: "center",
+    color: colors.muted,
+    fontSize: 14,
+    marginBottom: spacing.lg,
+  },
+  listSection: { gap: spacing.sm },
+  listTitle: {
+    fontSize: 16,
+    fontWeight: "600",
     color: colors.foreground,
-    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
   },
   textItem: {
     backgroundColor: colors.card,
@@ -267,60 +229,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.md,
-    marginBottom: spacing.sm,
   },
-  textItemPressed: {
-    borderColor: colors.primary,
-  },
-  textTitle: {
-    fontWeight: "600",
-    color: colors.foreground,
-    fontSize: 16,
-  },
-  textMeta: {
-    marginTop: spacing.xs,
-    color: colors.muted,
-    fontSize: 14,
-  },
-  emptyText: {
-    color: colors.muted,
-    fontSize: 14,
-  },
-  historyBlock: {
-    marginTop: spacing.lg,
-    gap: spacing.sm,
-  },
-  historyRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingVertical: spacing.sm,
-  },
-  historyTitle: {
-    flex: 1,
-    color: colors.foreground,
-  },
-  historyMeta: {
-    color: colors.muted,
-    fontVariant: ["tabular-nums"],
-  },
-  errorCard: {
+  textTitle: { fontWeight: "600", fontSize: 16, color: colors.foreground },
+  textMeta: { marginTop: 4, color: colors.muted, fontSize: 14 },
+  empty: { color: colors.muted, textAlign: "center", marginTop: spacing.lg },
+  errorBox: {
     backgroundColor: "#fef2f2",
-    borderColor: "#fecaca",
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
   },
-  errorTitle: {
-    fontWeight: "700",
-    color: "#991b1b",
-    marginBottom: spacing.xs,
-  },
-  errorText: {
-    color: "#991b1b",
-  },
-  errorHint: {
-    marginTop: spacing.sm,
-    color: colors.muted,
-    fontSize: 12,
-  },
+  errorText: { color: "#991b1b", textAlign: "center" },
+  retryButton: { marginTop: spacing.sm, alignItems: "center" },
+  retryText: { color: colors.primary, fontWeight: "600" },
 });
