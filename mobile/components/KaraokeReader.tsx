@@ -1,61 +1,91 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { tokenizeText } from "@karaoke/shared";
+import {
+  delayAfterLastWordMs,
+  delayBeforeNextWordMs,
+  tokenizeText,
+} from "@karaoke/shared";
 import { colors, radius } from "@/lib/theme";
 
 type Props = {
   content: string;
   speed: number;
   isPlaying: boolean;
+  runKey?: number;
   onWordChange?: (index: number) => void;
   onComplete?: () => void;
 };
-
-const MS_PER_WORD_BASE = 450;
 
 export function KaraokeReader({
   content,
   speed,
   isPlaying,
+  runKey = 0,
   onWordChange,
   onComplete,
 }: Props) {
   const words = useMemo(() => tokenizeText(content), [content]);
   const [activeIndex, setActiveIndex] = useState(-1);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onCompleteRef = useRef(onComplete);
+  const onWordChangeRef = useRef(onWordChange);
+  onCompleteRef.current = onComplete;
+  onWordChangeRef.current = onWordChange;
 
   const clearTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
     }
   }, []);
 
+  const resetHighlight = useCallback(() => {
+    clearTimer();
+    setActiveIndex(-1);
+  }, [clearTimer]);
+
+  useEffect(() => {
+    resetHighlight();
+  }, [runKey, content, resetHighlight]);
+
+  useEffect(() => {
+    if (isPlaying) return;
+    resetHighlight();
+  }, [isPlaying, resetHighlight]);
+
   useEffect(() => {
     clearTimer();
-    if (!isPlaying) return;
+    if (!isPlaying || words.length === 0) return;
 
-    const interval = MS_PER_WORD_BASE / speed;
-    let idx = activeIndex < 0 ? 0 : activeIndex;
+    let idx = 0;
+    setActiveIndex(0);
+    onWordChangeRef.current?.(0);
 
-    timerRef.current = setInterval(() => {
-      setActiveIndex(idx);
-      onWordChange?.(idx);
-      if (idx >= words.length - 1) {
-        clearTimer();
-        onComplete?.();
+    const scheduleNext = () => {
+      const word = words[idx];
+      const isLast = idx >= words.length - 1;
+
+      if (isLast) {
+        const tail = delayAfterLastWordMs(word, speed);
+        timeoutRef.current = setTimeout(() => {
+          onCompleteRef.current?.();
+        }, tail);
         return;
       }
-      idx += 1;
-    }, interval);
+
+      const delay = delayBeforeNextWordMs(word, speed);
+      timeoutRef.current = setTimeout(() => {
+        idx += 1;
+        setActiveIndex(idx);
+        onWordChangeRef.current?.(idx);
+        scheduleNext();
+      }, delay);
+    };
+
+    scheduleNext();
 
     return clearTimer;
-  }, [isPlaying, speed, words.length, clearTimer, onWordChange, onComplete]);
-
-  useEffect(() => {
-    if (!isPlaying) return;
-    setActiveIndex(-1);
-  }, [content, isPlaying]);
+  }, [isPlaying, speed, words, runKey, clearTimer]);
 
   return (
     <View
@@ -64,17 +94,17 @@ export function KaraokeReader({
       accessibilityRole="text"
     >
       {words.map((word, index) => {
-        const isPast = index < activeIndex;
+        const isPast = activeIndex >= 0 && index < activeIndex;
         const isActive = index === activeIndex;
 
         return (
           <Text
-            key={`${index}-${word}`}
+            key={`${runKey}-${index}-${word}`}
             style={[
               styles.word,
               isPast && styles.wordPast,
               isActive && styles.wordActive,
-              !isPast && !isActive && styles.wordFuture,
+              (activeIndex < 0 || index > activeIndex) && styles.wordFuture,
             ]}
           >
             {word}

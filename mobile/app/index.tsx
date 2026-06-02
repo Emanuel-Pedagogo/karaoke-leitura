@@ -121,9 +121,19 @@ export default function HomeScreen() {
       ) : null}
 
       {student ? (
-        <Text style={styles.xpLine}>
-          Nível {student.level} · {student.xp} pontos
-        </Text>
+        <View style={styles.statsRow}>
+          <Text style={styles.xpLine}>
+            Nível {student.level} · {student.xp} pontos
+          </Text>
+          <View style={styles.actionButtons}>
+            <Pressable onPress={() => router.push("/ranking" as any)} style={styles.actionButton}>
+              <Text style={styles.actionButtonText}>🏆 Ranking</Text>
+            </Pressable>
+            <Pressable onPress={() => router.push("/turma" as any)} style={styles.actionButton}>
+              <Text style={styles.actionButtonText}>Minha Turma</Text>
+            </Pressable>
+          </View>
+        </View>
       ) : null}
 
       {texts.length > 1 ? (
@@ -211,10 +221,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   xpLine: {
-    textAlign: "center",
     color: colors.muted,
     fontSize: 14,
+  },
+  statsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: spacing.lg,
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  actionButtons: {
+    flexDirection: "row",
+    gap: spacing.xs,
+  },
+  actionButton: {
+    backgroundColor: colors.primary + "15",
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radius.md,
+  },
+  actionButtonText: {
+    color: colors.primary,
+    fontWeight: "600",
+    fontSize: 13,
   },
   listSection: { gap: spacing.sm },
   listTitle: {

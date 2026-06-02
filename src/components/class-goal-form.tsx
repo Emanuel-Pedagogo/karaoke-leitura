@@ -90,7 +90,7 @@ export function ClassGoalForm({ classId, initial }: Props) {
         />
       </label>
       <label className="block text-sm">
-        WCPM mínimo (opcional, alertas futuros)
+        Palavras corretas por minuto — mínimo (opcional)
         <input
           type="number"
           min={0}

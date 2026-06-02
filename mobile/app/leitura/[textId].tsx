@@ -9,11 +9,21 @@ import {
 } from "react-native";
 import Slider from "@react-native-community/slider";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { calculateSessionMetrics } from "@karaoke/shared";
+import {
+  averageWcpm,
+  calculateSessionMetrics,
+  karaokeSpeedHint,
+  METRIC_WCPM_SHORT,
+  suggestKaraokeSpeed,
+  type KaraokeSpeedSuggestion,
+  type TextDifficultyLevel,
+} from "@karaoke/shared";
 import { Card } from "@/components/Card";
 import { KaraokeReader } from "@/components/KaraokeReader";
-import { ManualEvaluationPanel } from "@/components/ManualEvaluationPanel";
-import { VoiceAnalysisPanel } from "@/components/VoiceAnalysisPanel";
+import {
+  VoiceAnalysisPanel,
+  type AiEvaluationPayload,
+} from "@/components/VoiceAnalysisPanel";
 import { useReadingRecorder } from "@/hooks/useReadingRecorder";
 import {
   fetchPrivacyStatus,
@@ -24,7 +34,7 @@ import {
 } from "@/lib/api";
 import { colors, radius, spacing } from "@/lib/theme";
 
-type Phase = "ready" | "reading" | "evaluate" | "done";
+type Phase = "ready" | "reading" | "analyzing" | "done";
 
 export default function ReadingScreen() {
   const router = useRouter();
@@ -36,19 +46,18 @@ export default function ReadingScreen() {
   const [error, setError] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>("ready");
   const [speed, setSpeed] = useState(1);
+  const [speedHint, setSpeedHint] = useState<KaraokeSpeedSuggestion | null>(
+    null,
+  );
   const [isPlaying, setIsPlaying] = useState(false);
-  const [counts, setCounts] = useState({
-    omissions: 0,
-    substitutions: 0,
-    hesitations: 0,
-  });
-  const [prosody, setProsody] = useState(3);
+  const [attemptKey, setAttemptKey] = useState(0);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [aiFeedback, setAiFeedback] = useState<AiEvaluationPayload | null>(null);
   const [metrics, setMetrics] = useState<ReturnType<
     typeof calculateSessionMetrics
   > | null>(null);
   const [hasVoiceConsent, setHasVoiceConsent] = useState(false);
-  const [voiceMode, setVoiceMode] = useState(false);
-  const [spokenTranscript, setSpokenTranscript] = useState("");
+  const finishStartedRef = useRef(false);
   const {
     isRecording,
     recordingUri,
@@ -77,6 +86,16 @@ export default function ReadingScreen() {
         setStudentId(studentData?.id);
         setStudentName(studentData?.name ?? "Estudante");
         setHasVoiceConsent(privacy.hasVoiceConsent);
+
+        const avgWcpm = averageWcpm(
+          studentData?.recentSessions.map((s) => s.wcpm) ?? [],
+        );
+        const suggestion = suggestKaraokeSpeed(
+          avgWcpm,
+          textData.difficulty as TextDifficultyLevel,
+        );
+        setSpeed(suggestion.speed);
+        setSpeedHint(suggestion);
       } catch (loadError) {
         setError(
           loadError instanceof Error
@@ -92,11 +111,13 @@ export default function ReadingScreen() {
   }, [textId]);
 
   const handleStart = async () => {
+    if (!hasVoiceConsent) return;
     startRef.current = Date.now();
+    finishStartedRef.current = false;
+    setAnalysisError(null);
+    setAiFeedback(null);
     resetRecording();
-    if (voiceMode && hasVoiceConsent) {
-      await startRecording();
-    }
+    await startRecording();
     setPhase("reading");
     setIsPlaying(true);
   };
@@ -106,51 +127,69 @@ export default function ReadingScreen() {
     if (startRef.current) {
       durationRef.current = Math.round((Date.now() - startRef.current) / 1000);
     }
+    await new Promise((resolve) => setTimeout(resolve, 400));
     if (isRecording) {
       await stopRecording();
     }
-    setPhase("evaluate");
-  }, [isRecording, stopRecording]);
+    setPhase("analyzing");
+  }, [isRecording, speed, stopRecording]);
 
-  const handleFinish = async () => {
-    if (!text) return;
+  const saveAfterAi = useCallback(
+    async (payload: AiEvaluationPayload) => {
+      if (!text || finishStartedRef.current) return;
+      finishStartedRef.current = true;
 
-    const duration = Math.max(1, durationRef.current);
-    const result = calculateSessionMetrics({
-      wordCount: text.wordCount,
-      durationSeconds: duration,
-      ...counts,
-      prosodyScore: prosody,
-    });
-    setMetrics(result);
-    setPhase("done");
+      const counts = {
+        omissions: payload.omissions,
+        substitutions: payload.substitutions,
+        hesitations: payload.hesitations,
+      };
+      const duration = Math.max(1, durationRef.current);
+      const result = calculateSessionMetrics({
+        wordCount: text.wordCount,
+        durationSeconds: duration,
+        ...counts,
+        prosodyScore: payload.prosodyScore,
+      });
+      setMetrics(result);
+      setPhase("done");
 
-    if (studentId) {
-      try {
-        await saveReadingSession({
-          studentId,
-          textId: text.id,
-          durationSeconds: duration,
-          speedMultiplier: speed,
-          ...counts,
-          prosodyScore: prosody,
-          spokenTranscript: spokenTranscript || undefined,
-          asrSource: spokenTranscript ? "gemini" : undefined,
-          ...result,
-        });
-      } catch (saveError) {
-        setError(
-          saveError instanceof Error
-            ? saveError.message
-            : "Erro ao salvar a sessão",
-        );
+      if (studentId) {
+        try {
+          await saveReadingSession({
+            studentId,
+            textId: text.id,
+            durationSeconds: duration,
+            speedMultiplier: speed,
+            ...counts,
+            prosodyScore: payload.prosodyScore,
+            spokenTranscript: payload.spokenTranscript,
+            asrSource: "gemini",
+            ...result,
+          });
+        } catch (saveError) {
+          setError(
+            saveError instanceof Error
+              ? saveError.message
+              : "Erro ao salvar a sessão",
+          );
+        }
       }
-    }
-  };
+    },
+    [speed, studentId, text],
+  );
 
-  useEffect(() => {
-    if (phase !== "reading") setIsPlaying(false);
-  }, [phase]);
+  const handleTryAgain = () => {
+    finishStartedRef.current = false;
+    resetRecording();
+    setPhase("ready");
+    setMetrics(null);
+    setAiFeedback(null);
+    setAnalysisError(null);
+    setAttemptKey((k) => k + 1);
+    durationRef.current = 0;
+    startRef.current = null;
+  };
 
   if (loading) {
     return (
@@ -180,7 +219,7 @@ export default function ReadingScreen() {
           <Text style={styles.title}>{text.title}</Text>
           <Text style={styles.subtitle}>{studentName}</Text>
         </View>
-        {phase === "reading" ? (
+        {phase === "ready" || phase === "reading" ? (
           <View style={styles.speedBlock}>
             <Text style={styles.speedLabel}>Velocidade: {speed.toFixed(1)}×</Text>
             <Slider
@@ -203,68 +242,65 @@ export default function ReadingScreen() {
           <Text style={styles.recordingHint}>🔴 Gravando sua leitura…</Text>
         ) : null}
         <KaraokeReader
+          key={attemptKey}
           content={text.content}
           speed={speed}
           isPlaying={isPlaying}
+          runKey={attemptKey}
           onComplete={() => void handleComplete()}
         />
       </Card>
 
       {phase === "ready" ? (
         <View style={styles.readyBlock}>
+          {speedHint ? (
+            <Text style={styles.speedHintText}>{karaokeSpeedHint(speedHint)}</Text>
+          ) : null}
           {hasVoiceConsent ? (
-            <Pressable
-              style={styles.checkRow}
-              onPress={() => setVoiceMode(!voiceMode)}
-            >
-              <Text style={styles.checkMark}>{voiceMode ? "☑" : "☐"}</Text>
-              <Text style={styles.checkLabel}>
-                Usar microfone e análise automática (Gemini)
-              </Text>
-            </Pressable>
+            <Text style={styles.voiceHint}>
+              Leia em voz alta: o microfone grava e a IA avalia ao terminar.
+            </Text>
           ) : (
             <Text style={styles.voiceHint}>
-              Microfone desativado. Autorize em Privacidade na tela inicial ou
-              use avaliação manual.
+              Autorize o microfone em Privacidade na tela inicial para usar a
+              avaliação por IA.
             </Text>
           )}
           <Pressable
             onPress={() => void handleStart()}
-            style={styles.primaryButton}
+            disabled={!hasVoiceConsent}
+            style={[styles.primaryButton, !hasVoiceConsent && styles.disabled]}
           >
             <Text style={styles.primaryButtonText}>Iniciar leitura</Text>
           </Pressable>
         </View>
       ) : null}
 
-      {phase === "evaluate" ? (
+      {phase === "analyzing" ? (
         <Card>
-          {voiceMode && hasVoiceConsent ? (
+          {recordingUri ? (
             <VoiceAnalysisPanel
+              key={attemptKey}
               textId={text.id}
               recordingUri={recordingUri}
-              autoAnalyze={Boolean(recordingUri)}
-              onApply={(a, transcript) => {
-                setCounts(a);
-                if (transcript) setSpokenTranscript(transcript);
+              attemptKey={attemptKey}
+              onSuccess={(payload) => {
+                setAiFeedback(payload);
+                void saveAfterAi(payload);
               }}
+              onError={setAnalysisError}
             />
+          ) : (
+            <Text style={styles.voiceHint}>Finalizando gravação…</Text>
+          )}
+          {analysisError ? (
+            <Pressable
+              onPress={handleTryAgain}
+              style={[styles.secondaryButton, { marginTop: spacing.md }]}
+            >
+              <Text style={styles.secondaryButtonText}>Tentar novamente</Text>
+            </Pressable>
           ) : null}
-          {voiceMode && hasVoiceConsent ? (
-            <View style={{ height: spacing.md }} />
-          ) : null}
-          <View style={{ height: spacing.md }} />
-          <ManualEvaluationPanel
-            counts={counts}
-            prosodyScore={prosody}
-            onChange={(nextCounts, nextProsody) => {
-              setCounts(nextCounts);
-              setProsody(nextProsody);
-            }}
-          />
-          <Pressable onPress={() => void handleFinish()} style={styles.successButton}>
-            <Text style={styles.primaryButtonText}>Concluir e ver resultado</Text>
-          </Pressable>
         </Card>
       ) : null}
 
@@ -277,7 +313,7 @@ export default function ReadingScreen() {
               <Text style={styles.metricValue}>{metrics.accuracyPct}%</Text>
             </View>
             <View style={styles.metricItem}>
-              <Text style={styles.metricLabel}>WCPM</Text>
+              <Text style={styles.metricLabel}>{METRIC_WCPM_SHORT}</Text>
               <Text style={styles.metricValue}>{metrics.wcpm}</Text>
             </View>
             <View style={styles.metricItem}>
@@ -293,7 +329,13 @@ export default function ReadingScreen() {
               </Text>
             </View>
           </View>
+          {aiFeedback ? (
+            <Text style={styles.voiceHint}>{aiFeedback.feedback.summary}</Text>
+          ) : null}
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          <Pressable onPress={handleTryAgain} style={styles.secondaryButton}>
+            <Text style={styles.secondaryButtonText}>Tentar novamente</Text>
+          </Pressable>
           <Pressable onPress={() => router.replace("/")} style={styles.primaryButton}>
             <Text style={styles.primaryButtonText}>Voltar ao início</Text>
           </Pressable>
@@ -356,11 +398,15 @@ const styles = StyleSheet.create({
   checkMark: { fontSize: 18 },
   checkLabel: { flex: 1, fontSize: 14, color: colors.foreground },
   voiceHint: { fontSize: 13, color: colors.muted },
+  speedHintText: { fontSize: 13, color: colors.muted, marginBottom: spacing.sm },
   primaryButton: {
     backgroundColor: colors.primary,
     borderRadius: radius.xl,
     paddingVertical: spacing.md,
     alignItems: "center",
+  },
+  disabled: {
+    opacity: 0.5,
   },
   primaryButtonText: {
     color: "#ffffff",

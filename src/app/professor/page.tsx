@@ -60,6 +60,12 @@ export default async function ProfessorDashboardPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
+            href="/professor/alunos"
+            className="px-4 py-2 rounded-lg border border-primary text-primary hover:bg-primary/10 text-sm"
+          >
+            Alunos/Convites
+          </Link>
+          <Link
             href="/professor/metas"
             className="px-4 py-2 rounded-lg border border-primary text-primary hover:bg-primary/10 text-sm"
           >
@@ -172,7 +178,7 @@ export default async function ProfessorDashboardPage() {
                 <th className="py-2 pr-4">XP</th>
                 <th className="py-2 pr-4">Leituras</th>
                 <th className="py-2 pr-4">Precisão média</th>
-                <th className="py-2">WCPM médio</th>
+                <th className="py-2">Palavras/min (média)</th>
               </tr>
             </thead>
             <tbody>

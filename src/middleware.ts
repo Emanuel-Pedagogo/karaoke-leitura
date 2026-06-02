@@ -66,6 +66,7 @@ export async function middleware(request: NextRequest) {
     pathname === "/api/reading/transcribe" ||
     pathname === "/api/assistant" ||
     pathname === "/api/texts/suggest" ||
+    pathname.startsWith("/api/class-requests/student") ||
     pathname.startsWith("/api/privacy")
   ) {
     if (!session || session.role !== "STUDENT" || !session.studentId) {
@@ -77,6 +78,7 @@ export async function middleware(request: NextRequest) {
   if (
     (pathname.startsWith("/api/texts") && request.method !== "GET") ||
     (pathname === "/api/missions" && request.method === "POST") ||
+    pathname.startsWith("/api/class-requests/teacher") ||
     (pathname === "/api/class-goals" && request.method === "PUT")
   ) {
     if (
@@ -95,6 +97,7 @@ export const config = {
     "/aluno/:path*",
     "/professor/:path*",
     "/api/student/me",
+    "/api/student/ranking",
     "/api/sessions",
     "/api/sessions/evaluate",
     "/api/reading/align",
@@ -107,5 +110,6 @@ export const config = {
     "/coordenador/:path*",
     "/api/class-goals",
     "/api/privacy/:path*",
+    "/api/class-requests/:path*",
   ],
 };

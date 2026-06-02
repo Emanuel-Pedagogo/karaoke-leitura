@@ -23,7 +23,7 @@ export default async function AssistentePage() {
             <>
               {" "}
               · precisão média {avgAccuracy.toFixed(0)}%
-              {avgWcpm != null ? ` · WCPM ${avgWcpm.toFixed(0)}` : ""}
+              {avgWcpm != null ? ` · ${avgWcpm.toFixed(0)} palavras/min` : ""}
             </>
           )}
         </p>

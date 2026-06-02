@@ -203,7 +203,7 @@ export default async function AlunoHomePage() {
                 <span>{s.text.title}</span>
                 <span className="text-muted tabular-nums">
                   {s.accuracyPct != null ? `${s.accuracyPct}%` : "—"} ·{" "}
-                  {s.wcpm != null ? `${s.wcpm} WCPM` : "—"}
+                  {s.wcpm != null ? `${s.wcpm} palavras/min` : "—"}
                 </span>
               </li>
             ))}

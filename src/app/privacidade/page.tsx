@@ -30,7 +30,7 @@ export default function PrivacidadePage() {
         <h2 className="text-xl font-bold">2. Quais dados coletamos</h2>
         <ul className="list-disc pl-6 space-y-1">
           <li>Nome, e-mail e turma (cadastro)</li>
-          <li>Desempenho em leituras: precisão, WCPM, erros, prosódia, XP, datas</li>
+          <li>Desempenho em leituras: precisão, palavras por minuto, erros, prosódia, XP, datas</li>
           <li>
             <strong>Voz (somente se você consentir):</strong> transcrição em texto da
             fala durante a leitura. <strong>Não armazenamos o arquivo de áudio</strong>{" "}

@@ -94,7 +94,7 @@ export default async function RelatorioPage() {
                 <th className="py-1 pr-3">Nível</th>
                 <th className="py-1 pr-3">Total leituras</th>
                 <th className="py-1 pr-3">Precisão média</th>
-                <th className="py-1">WCPM médio</th>
+                <th className="py-1">Palavras/min (média)</th>
               </tr>
             </thead>
             <tbody>

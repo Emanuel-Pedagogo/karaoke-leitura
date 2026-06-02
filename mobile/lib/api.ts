@@ -2,7 +2,7 @@ import { API_URL } from "./config";
 import { clearAuthToken, getAuthToken } from "./session";
 import type { ReadingErrorCounts } from "@karaoke/shared";
 
-async function authHeaders() {
+async function authHeaders(): Promise<Record<string, string>> {
   const token = await getAuthToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
@@ -188,10 +188,84 @@ export async function evaluateAudioWithGemini(uri: string, textId: string) {
     success: boolean;
     evaluation: {
       spokenTranscript: string;
-      metrics: ReadingErrorCounts;
+      metrics: ReadingErrorCounts & {
+        insertions?: number;
+        selfCorrections?: number;
+      };
+      scores: {
+        prosody: number;
+        fluency: number;
+        expression: number;
+        pace: number;
+        accuracy: number;
+      };
+      feedback: {
+        summary: string;
+        strengths: string[];
+        improvements: string[];
+      };
       errors: Array<{ word: string; type: string }>;
     };
   }>(response);
+}
+
+export type ClassJoinRequest = {
+  id: string;
+  class: {
+    name: string;
+    school: { name: string };
+  };
+  type: "CODE_JOIN" | "TEACHER_INVITE";
+  status: "PENDING" | "APPROVED" | "REJECTED";
+};
+
+export async function fetchStudentClassRequests() {
+  const response = await fetch(`${API_URL}/api/class-requests/student`, {
+    headers: await authHeaders(),
+  });
+  const data = await parseJson<{ requests: ClassJoinRequest[] }>(response);
+  return data.requests;
+}
+
+export async function requestJoinClass(classCode: string) {
+  const response = await fetch(`${API_URL}/api/class-requests/student`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(await authHeaders()),
+    },
+    body: JSON.stringify({ classCode }),
+  });
+  return parseJson<{ request: ClassJoinRequest }>(response);
+}
+
+export async function respondToInvite(requestId: string, action: "ACCEPT" | "REJECT") {
+  const response = await fetch(`${API_URL}/api/class-requests/student`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...(await authHeaders()),
+    },
+    body: JSON.stringify({ requestId, action }),
+  });
+  return parseJson<{ request: ClassJoinRequest }>(response);
+}
+
+export type RankingStudent = {
+  id: string;
+  name: string;
+  xp: number;
+  level: number;
+  comboStreak: number;
+  position: number;
+};
+
+export async function fetchClassRanking() {
+  const response = await fetch(`${API_URL}/api/student/ranking`, {
+    headers: await authHeaders(),
+  });
+  const data = await parseJson<{ ranking: RankingStudent[] }>(response);
+  return data.ranking;
 }
 
 export async function saveReadingSession(payload: {

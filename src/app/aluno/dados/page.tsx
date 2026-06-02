@@ -44,7 +44,7 @@ export default async function MeusDadosPage() {
         </p>
         <p className="text-muted">
           Você pode apagar todas as <strong>transcrições</strong> salvas nas suas
-          leituras. Métricas (precisão, WCPM) permanecem para o professor.
+          leituras. Métricas (precisão, palavras por minuto) permanecem para o professor.
         </p>
         <EraseVoiceDataButton />
         {!hasVoiceConsent && (

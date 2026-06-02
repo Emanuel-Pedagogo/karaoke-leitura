@@ -111,6 +111,14 @@ export function useSpeechRecording(active: boolean) {
     return () => stop();
   }, [active, start, stop]);
 
+  const reset = useCallback(() => {
+    stop();
+    setTranscript("");
+    setAudioBlob(null);
+    setError(null);
+    chunksRef.current = [];
+  }, [stop]);
+
   return {
     transcript,
     listening,
@@ -118,5 +126,6 @@ export function useSpeechRecording(active: boolean) {
     error,
     audioBlob,
     setTranscript,
+    reset,
   };
 }

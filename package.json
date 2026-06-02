@@ -7,13 +7,13 @@
     "mobile"
   ],
   "scripts": {
-    "dev": "next dev",
+    "dev": "node --use-system-ca ./node_modules/next/dist/bin/next dev",
     "dev:mobile": "npm run start --workspace=mobile",
     "build:mobile:android": "npm run build:android --workspace=mobile",
     "build:mobile:android:preview": "npm run build:android:preview --workspace=mobile",
     "submit:mobile:android": "npm run submit:android --workspace=mobile",
     "build": "next build",
-    "start": "next start",
+    "start": "node --use-system-ca ./node_modules/next/dist/bin/next start",
     "lint": "next lint",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",

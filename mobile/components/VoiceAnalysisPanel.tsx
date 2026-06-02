@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import { Audio } from "expo-av";
 import {
   evaluateAudioWithGemini,
   fetchPrivacyStatus,
@@ -15,48 +13,77 @@ import {
 import { formatApiError } from "@/lib/format-api-error";
 import { colors, radius, spacing } from "@/lib/theme";
 
-type Alignment = {
+export type AiEvaluationPayload = {
   omissions: number;
   substitutions: number;
   hesitations: number;
+  prosodyScore: number;
+  spokenTranscript?: string;
+  scores: {
+    prosody: number;
+    fluency: number;
+    expression: number;
+    pace: number;
+    accuracy: number;
+  };
+  feedback: {
+    summary: string;
+    strengths: string[];
+    improvements: string[];
+  };
+  metrics: {
+    insertions?: number;
+    selfCorrections?: number;
+  };
+  errorCount: number;
 };
 
 type Props = {
   textId: string;
-  /** Áudio gravado durante a leitura (recomendado) */
   recordingUri?: string | null;
-  /** Analisar automaticamente ao entrar na tela de avaliação */
+  attemptKey: number;
   autoAnalyze?: boolean;
-  onApply: (counts: Alignment, spokenTranscript?: string) => void;
+  onSuccess: (payload: AiEvaluationPayload) => void;
+  onError: (message: string) => void;
+};
+
+const SCORE_LABELS: Record<string, string> = {
+  prosody: "Prosódia",
+  fluency: "Fluência",
+  expression: "Expressão",
+  pace: "Ritmo",
+  accuracy: "Precisão",
 };
 
 export function VoiceAnalysisPanel({
   textId,
   recordingUri,
-  autoAnalyze = false,
-  onApply,
+  attemptKey,
+  autoAnalyze = true,
+  onSuccess,
+  onError,
 }: Props) {
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [lastAlignment, setLastAlignment] = useState<Alignment | null>(null);
-  const [transcriptPreview, setTranscriptPreview] = useState<string | null>(
-    null,
-  );
-  const [manualRecording, setManualRecording] = useState<Audio.Recording | null>(
-    null,
-  );
-  const autoRanRef = useRef(false);
+  const [payload, setPayload] = useState<AiEvaluationPayload | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const ranRef = useRef(false);
+
+  useEffect(() => {
+    ranRef.current = false;
+    setPayload(null);
+    setError(null);
+  }, [attemptKey]);
 
   async function analyzeUri(uri: string) {
     setLoading(true);
-    setMessage(null);
+    setError(null);
     try {
       const privacy = await fetchPrivacyStatus();
       if (!privacy.hasVoiceConsent) {
-        Alert.alert(
-          "LGPD",
-          "Autorize o microfone em Privacidade (menu inicial) para usar a IA.",
-        );
+        const msg =
+          "Autorize o microfone em Privacidade (menu inicial) para usar a IA.";
+        setError(msg);
+        onError(msg);
         return;
       }
 
@@ -65,145 +92,119 @@ export function VoiceAnalysisPanel({
         throw new Error("A IA não retornou uma avaliação válida.");
       }
 
-      const alignment = {
-        omissions: result.evaluation.metrics.omissions ?? 0,
-        substitutions: result.evaluation.metrics.substitutions ?? 0,
-        hesitations: result.evaluation.metrics.hesitations ?? 0,
+      const ev = result.evaluation;
+      const data: AiEvaluationPayload = {
+        omissions: ev.metrics?.omissions ?? 0,
+        substitutions: ev.metrics?.substitutions ?? 0,
+        hesitations: ev.metrics?.hesitations ?? 0,
+        prosodyScore: ev.scores?.prosody ?? 3,
+        spokenTranscript: ev.spokenTranscript,
+        scores: {
+          prosody: ev.scores?.prosody ?? 3,
+          fluency: ev.scores?.fluency ?? 3,
+          expression: ev.scores?.expression ?? 3,
+          pace: ev.scores?.pace ?? 3,
+          accuracy: ev.scores?.accuracy ?? 3,
+        },
+        feedback: {
+          summary:
+            ev.feedback?.summary ??
+            "Leitura analisada. Continue praticando!",
+          strengths: ev.feedback?.strengths ?? [],
+          improvements: ev.feedback?.improvements ?? [],
+        },
+        metrics: {
+          insertions: ev.metrics?.insertions,
+          selfCorrections: ev.metrics?.selfCorrections,
+        },
+        errorCount: ev.errors?.length ?? 0,
       };
-      setLastAlignment(alignment);
-      setTranscriptPreview(
-        result.evaluation.spokenTranscript?.slice(0, 120) ?? null,
-      );
-      setMessage(
-        `Gemini encontrou ${result.evaluation.errors?.length ?? 0} erro(s). Toque em "Usar sugestão" abaixo.`,
-      );
-      onApply(alignment, result.evaluation.spokenTranscript);
+      setPayload(data);
+      onSuccess(data);
     } catch (e) {
       const msg = formatApiError(
         e instanceof Error ? e.message : "Não foi possível analisar com o Gemini",
       );
-      setMessage(msg);
-      Alert.alert("Erro na análise", msg);
+      setError(msg);
+      onError(msg);
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    if (!autoAnalyze || !recordingUri || autoRanRef.current) return;
-    autoRanRef.current = true;
+    if (!autoAnalyze || !recordingUri || ranRef.current) return;
+    ranRef.current = true;
     void analyzeUri(recordingUri);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- só na primeira vez com URI
-  }, [autoAnalyze, recordingUri]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoAnalyze, recordingUri, attemptKey]);
 
-  async function startManualRecording() {
-    const privacy = await fetchPrivacyStatus();
-    if (!privacy.hasVoiceConsent) {
-      Alert.alert(
-        "LGPD",
-        "Autorize o microfone na tela de consentimento (privacidade).",
-      );
-      return;
-    }
-
-    await Audio.requestPermissionsAsync();
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: true,
-      playsInSilentModeIOS: true,
-    });
-    const { recording } = await Audio.Recording.createAsync(
-      Audio.RecordingOptionsPresets.HIGH_QUALITY,
+  if (loading) {
+    return (
+      <View style={styles.wrap}>
+        <View style={styles.loadingRow}>
+          <ActivityIndicator color={colors.primary} />
+          <Text style={styles.muted}>Analisando sua leitura com IA…</Text>
+        </View>
+      </View>
     );
-    setManualRecording(recording);
   }
 
-  async function stopManualAndAnalyze() {
-    if (!manualRecording) return;
-    setLoading(true);
-    try {
-      await manualRecording.stopAndUnloadAsync();
-      const uri = manualRecording.getURI();
-      setManualRecording(null);
-      if (!uri) throw new Error("Gravação vazia");
-      await analyzeUri(uri);
-    } catch (e) {
-      Alert.alert(
-        "Erro",
-        e instanceof Error ? e.message : "Não foi possível gravar",
-      );
-    } finally {
-      setLoading(false);
-    }
+  if (error) {
+    return (
+      <View style={styles.wrap}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
   }
+
+  if (!payload) return null;
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.title}>🎤 Análise por voz (Gemini)</Text>
+      <Text style={styles.title}>Avaliação da IA</Text>
+      <Text style={styles.summary}>{payload.feedback.summary}</Text>
 
-      {recordingUri && !autoAnalyze ? (
-        <Pressable
-          style={styles.secondaryButton}
-          onPress={() => void analyzeUri(recordingUri)}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color={colors.primary} />
-          ) : (
-            <Text style={styles.secondaryText}>
-              Analisar gravação da leitura
+      <View style={styles.scoreRow}>
+        {Object.entries(SCORE_LABELS).map(([key, label]) => (
+          <View key={key} style={styles.scoreChip}>
+            <Text style={styles.scoreLabel}>{label}</Text>
+            <Text style={styles.scoreValue}>
+              {payload.scores[key as keyof typeof payload.scores]}/5
             </Text>
-          )}
-        </Pressable>
-      ) : null}
+          </View>
+        ))}
+      </View>
 
-      {loading && autoAnalyze ? (
-        <View style={styles.loadingRow}>
-          <ActivityIndicator color={colors.primary} />
-          <Text style={styles.muted}>Analisando com IA…</Text>
+      <Text style={styles.metrics}>
+        Omissões {payload.omissions} · Substituições {payload.substitutions} ·
+        Hesitações {payload.hesitations}
+        {(payload.metrics.insertions ?? 0) > 0
+          ? ` · Inserções ${payload.metrics.insertions}`
+          : ""}
+      </Text>
+
+      {payload.feedback.strengths.length > 0 ? (
+        <View>
+          <Text style={styles.sectionTitle}>Pontos fortes</Text>
+          {payload.feedback.strengths.map((s) => (
+            <Text key={s} style={styles.bullet}>
+              • {s}
+            </Text>
+          ))}
         </View>
       ) : null}
 
-      {!recordingUri && !loading ? (
-        <Pressable
-          style={styles.outlineButton}
-          onPress={() => {
-            if (manualRecording) void stopManualAndAnalyze();
-            else void startManualRecording();
-          }}
-          disabled={loading}
-        >
-          <Text style={styles.outlineText}>
-            {manualRecording
-              ? "⏹ Parar e analisar voz"
-              : "🎤 Gravar leitura agora (IA)"}
-          </Text>
-        </Pressable>
-      ) : null}
-
-      {transcriptPreview ? (
-        <Text style={styles.transcript} numberOfLines={3}>
-          Ouvido: {transcriptPreview}
-          {transcriptPreview.length >= 120 ? "…" : ""}
-        </Text>
-      ) : null}
-
-      {lastAlignment ? (
-        <View style={styles.suggestion}>
-          <Text style={styles.suggestionText}>
-            Sugestão: {lastAlignment.omissions} omissões ·{" "}
-            {lastAlignment.substitutions} substituições ·{" "}
-            {lastAlignment.hesitations} hesitações
-          </Text>
-          <Pressable
-            style={styles.applyButton}
-            onPress={() => onApply(lastAlignment, transcriptPreview ?? undefined)}
-          >
-            <Text style={styles.applyText}>Usar sugestão nos contadores</Text>
-          </Pressable>
+      {payload.feedback.improvements.length > 0 ? (
+        <View>
+          <Text style={styles.sectionTitle}>Para praticar</Text>
+          {payload.feedback.improvements.map((s) => (
+            <Text key={s} style={styles.bullet}>
+              • {s}
+            </Text>
+          ))}
         </View>
       ) : null}
-
-      {message ? <Text style={styles.message}>{message}</Text> : null}
     </View>
   );
 }
@@ -211,37 +212,26 @@ export function VoiceAnalysisPanel({
 const styles = StyleSheet.create({
   wrap: { gap: spacing.sm },
   title: { fontSize: 14, fontWeight: "700", color: colors.foreground },
+  summary: { fontSize: 14, color: colors.foreground },
   loadingRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
   },
   muted: { fontSize: 13, color: colors.muted },
-  outlineButton: {
-    borderWidth: 1,
-    borderColor: colors.primary,
+  errorText: { fontSize: 13, color: "#991b1b" },
+  scoreRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
+  scoreChip: {
+    backgroundColor: colors.highlight,
     borderRadius: radius.md,
-    padding: spacing.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    minWidth: 72,
     alignItems: "center",
   },
-  outlineText: { color: colors.primary, fontWeight: "600", fontSize: 14 },
-  secondaryButton: {
-    borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    alignItems: "center",
-  },
-  secondaryText: { color: colors.primary, fontWeight: "600" },
-  transcript: { fontSize: 12, color: colors.muted },
-  suggestion: { gap: spacing.sm },
-  suggestionText: { fontSize: 12, color: colors.foreground },
-  applyButton: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.md,
-    padding: spacing.sm,
-    alignItems: "center",
-  },
-  applyText: { color: "#fff", fontWeight: "600", fontSize: 14 },
-  message: { fontSize: 12, color: colors.muted },
+  scoreLabel: { fontSize: 10, color: colors.muted },
+  scoreValue: { fontSize: 16, fontWeight: "700", color: colors.foreground },
+  metrics: { fontSize: 12, color: colors.muted },
+  sectionTitle: { fontSize: 12, fontWeight: "700", color: colors.foreground },
+  bullet: { fontSize: 12, color: colors.foreground },
 });

@@ -54,7 +54,7 @@ export default async function EvolucaoPage() {
         </Card>
         <Card>
           <EvolutionChart
-            title="WCPM médio semanal"
+            title="Palavras/min (média semanal)"
             data={weekly}
             metric="avgWcpm"
           />

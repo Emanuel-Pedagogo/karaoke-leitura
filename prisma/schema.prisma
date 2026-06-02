@@ -52,6 +52,28 @@ enum ReadingErrorType {
 
 
 
+enum JoinRequestType {
+
+  CODE_JOIN
+
+  TEACHER_INVITE
+
+}
+
+
+
+enum JoinRequestStatus {
+
+  PENDING
+
+  APPROVED
+
+  REJECTED
+
+}
+
+
+
 model School {
 
   id        String   @id @default(cuid())
@@ -91,6 +113,8 @@ model Class {
   missions  Mission[]
 
   goal      ClassGoal?
+
+  requests  ClassJoinRequest[]
 
   createdAt DateTime @default(now())
 
@@ -191,6 +215,8 @@ model StudentProfile {
   achievements StudentAchievement[]
 
   missionProgress MissionProgress[]
+
+  joinRequests ClassJoinRequest[]
 
 }
 
@@ -385,6 +411,34 @@ model MissionProgress {
 
 
   @@unique([missionId, studentId])
+
+}
+
+
+
+model ClassJoinRequest {
+
+  id        String   @id @default(cuid())
+
+  studentId String
+
+  student   StudentProfile @relation(fields: [studentId], references: [id])
+
+  classId   String
+
+  class     Class          @relation(fields: [classId], references: [id])
+
+  type      JoinRequestType
+
+  status    JoinRequestStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+
+
+  @@unique([studentId, classId])
 
 }
 

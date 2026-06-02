@@ -83,7 +83,7 @@ export default async function AlunoDetalhePage({
                   ? new Date(s.completedAt).toLocaleDateString("pt-BR")
                   : "—"}{" "}
                 · {s.accuracyPct != null ? `${s.accuracyPct}%` : "—"} ·{" "}
-                {s.wcpm != null ? `${s.wcpm} WCPM` : "—"}
+                {s.wcpm != null ? `${s.wcpm} palavras/min` : "—"}
               </span>
             </li>
           ))}
