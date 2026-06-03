@@ -39,6 +39,7 @@ Plataforma educacional gamificada para desenvolvimento da **fluência leitora**,
 - [Especificação funcional](./docs/ESPECIFICACAO-FUNCIONAL.md)
 - [Modelo de domínio](./docs/MODELO-DE-DOMINIO.md)
 - [Roadmap](./docs/ROADMAP.md)
+- [Plano de larga escala](./docs/PLANO-LARGA-ESCALA.md)
 - [Guia do app Android (React Native)](./docs/GUIA-MOBILE.md)
 - [Publicar na Play Store (EAS)](./docs/PUBLICAR-PLAY-STORE.md)
 - [Fase 4 — Voz e IA](./docs/FASE-4-VOZ.md)

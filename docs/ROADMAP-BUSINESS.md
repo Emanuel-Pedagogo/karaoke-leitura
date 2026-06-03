@@ -2,6 +2,8 @@
 
 Este documento serve como um guia estratégico e de negócios para a evolução do aplicativo, separando o desenvolvimento em fases claras desde o piloto até a escalabilidade B2B/B2C.
 
+Para o detalhamento técnico de segurança, infraestrutura, banco, IA, Play Store e preparação para muitos usuários, consulte também o [Plano de Larga Escala](./PLANO-LARGA-ESCALA.md).
+
 ---
 
 ### FASE 1: O Piloto e a Validação (Foco Atual)
