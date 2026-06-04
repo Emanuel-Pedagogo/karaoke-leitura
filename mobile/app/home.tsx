@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { DIFFICULTY_LABELS } from "@karaoke/shared";
+import { AppVersion } from "@/components/AppVersion";
 import {
   fetchPrivacyStatus,
   fetchStudentClassRequests,
@@ -274,6 +275,8 @@ export default function HomeScreen() {
           {classSession ? "Próximo aluno →" : "Trocar de aluno (sair)"}
         </Text>
       </Pressable>
+
+      <AppVersion />
 
       {classSession ? (
         <Pressable

@@ -18,7 +18,7 @@ async function ensureColumn(
   const columns = await database.getAllAsync<{ name: string }>(
     "PRAGMA table_info(" + table + ")",
   );
-  if (!columns.some((item) => item.name === column)) {
+  if (!columns.some((item: { name: string }) => item.name === column)) {
     await database.execAsync(
       "ALTER TABLE " + table + " ADD COLUMN " + column + " " + definition,
     );

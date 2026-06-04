@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Link } from "expo-router";
+import { AppVersion } from "@/components/AppVersion";
 import { colors, radius, spacing } from "@/lib/theme";
 
 export default function WelcomeScreen() {
@@ -25,6 +26,8 @@ export default function WelcomeScreen() {
           </Pressable>
         </Link>
       </View>
+
+      <AppVersion />
     </View>
   );
 }

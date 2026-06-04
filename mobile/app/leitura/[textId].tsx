@@ -41,7 +41,7 @@ import { isDeviceOffline } from "@/lib/network";
 import { hasClassSession } from "@/lib/class-session";
 import { colors, radius, spacing } from "@/lib/theme";
 
-type Phase = "ready" | "reading" | "analyzing" | "done";
+type Phase = "ready" | "countdown" | "reading" | "analyzing" | "done";
 
 export default function ReadingScreen() {
   const router = useRouter();
@@ -53,6 +53,7 @@ export default function ReadingScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>("ready");
+  const [countdown, setCountdown] = useState(3);
   const [speed, setSpeed] = useState(1);
   const [speedHint, setSpeedHint] = useState<KaraokeSpeedSuggestion | null>(
     null,
@@ -88,6 +89,7 @@ export default function ReadingScreen() {
         finishStartedRef.current = false;
         resetRecording();
         setPhase("ready");
+        setCountdown(3);
         setMetrics(null);
         setAiFeedback(null);
         setAnalysisError(null);
@@ -137,16 +139,32 @@ export default function ReadingScreen() {
     void hasClassSession().then(setClassSession);
   }, []);
 
-  const handleStart = async () => {
-    if (!hasVoiceConsent) return;
+  const beginReading = useCallback(async () => {
     startRef.current = Date.now();
-    finishStartedRef.current = false;
-    setAnalysisError(null);
-    setAiFeedback(null);
     resetRecording();
     await startRecording();
     setPhase("reading");
     setIsPlaying(true);
+  }, [resetRecording, startRecording]);
+
+  useEffect(() => {
+    if (phase !== "countdown") return;
+    if (countdown <= 0) {
+      void beginReading();
+      return;
+    }
+    const timer = setTimeout(() => setCountdown((value) => value - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [beginReading, countdown, phase]);
+
+  const handleStart = () => {
+    if (!hasVoiceConsent) return;
+    finishStartedRef.current = false;
+    setAnalysisError(null);
+    setAiFeedback(null);
+    setError(null);
+    setCountdown(3);
+    setPhase("countdown");
   };
 
   const handleComplete = useCallback(async () => {
@@ -271,6 +289,7 @@ export default function ReadingScreen() {
     finishStartedRef.current = false;
     resetRecording();
     setPhase("ready");
+    setCountdown(3);
     setMetrics(null);
     setAiFeedback(null);
     setAnalysisError(null);
@@ -328,6 +347,12 @@ export default function ReadingScreen() {
       </View>
 
       <Card style={styles.readerCard}>
+        {phase === "countdown" ? (
+          <View style={styles.countdownBox}>
+            <Text style={styles.countdownNumber}>{countdown}</Text>
+            <Text style={styles.countdownText}>Prepare-se para ler em voz alta</Text>
+          </View>
+        ) : null}
         {phase === "reading" && isRecording ? (
           <Text style={styles.recordingHint}>🔴 Gravando sua leitura…</Text>
         ) : null}
@@ -335,7 +360,7 @@ export default function ReadingScreen() {
           key={attemptKey}
           content={text.content}
           speed={speed}
-          isPlaying={isPlaying}
+          isPlaying={phase === "reading" && isPlaying}
           runKey={attemptKey}
           onComplete={() => void handleComplete()}
         />
@@ -511,6 +536,21 @@ const styles = StyleSheet.create({
     minHeight: 220,
     justifyContent: "center",
     gap: spacing.sm,
+  },
+  countdownBox: {
+    alignItems: "center",
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  countdownNumber: {
+    fontSize: 48,
+    fontWeight: "700",
+    color: colors.primary,
+  },
+  countdownText: {
+    fontSize: 14,
+    color: colors.muted,
+    textAlign: "center",
   },
   recordingHint: {
     textAlign: "center",

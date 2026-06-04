@@ -5,7 +5,7 @@ export function formatApiError(message: string): string {
     message.includes("API key not valid") ||
     message.includes("GEMINI_API_KEY")
   ) {
-    return "Chave do Gemini inválida no servidor. Peça ao administrador para configurar GEMINI_API_KEY na Vercel e fazer Redeploy.";
+    return "Erro na análise por IA. Tente novamente. Se este erro aparecer sempre nesta versão, verifique GEMINI_API_KEY na Vercel e faça redeploy.";
   }
   if (
     message.includes("UNABLE_TO_VERIFY") ||
@@ -15,7 +15,7 @@ export function formatApiError(message: string): string {
     return "Erro de certificado SSL no servidor ao chamar o Gemini. No PC de desenvolvimento, reinicie com npm run dev.";
   }
   if (message.startsWith("{") && message.length > 120) {
-    return "Erro no servidor ao analisar o áudio. Verifique a chave GEMINI_API_KEY na Vercel.";
+    return "Erro temporário no servidor ao analisar o áudio. Toque em Tentar novamente. Se persistir, avise o administrador.";
   }
   return message;
 }

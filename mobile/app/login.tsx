@@ -9,12 +9,16 @@ import {
   View,
 } from "react-native";
 import { Link, useRouter } from "expo-router";
+import { AppVersion } from "@/components/AppVersion";
 import { API_URL } from "@/lib/config";
 import { setClassCode as persistClassCode, clearClassCode } from "@/lib/class-session";
 import { setAuthToken } from "@/lib/session";
+import { fetchWithTimeout, parseResponseJson } from "@/lib/fetch-timeout";
 import { colors, radius, spacing } from "@/lib/theme";
 
 type ClassStudent = { id: string; name: string };
+type LoginResponse = { token?: string; role?: string; name?: string; error?: string };
+type ClassStudentsResponse = { className?: string; students?: ClassStudent[]; error?: string };
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -30,15 +34,20 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
 
   async function handleEmailLogin() {
+    if (loading) return;
+    if (!email.trim() || !password) {
+      setError("Informe e-mail e senha.");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_URL}/api/auth/login`, {
+      const res = await fetchWithTimeout(`${API_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      const data = await res.json();
+      const data = await parseResponseJson<LoginResponse>(res);
       if (!res.ok || !data.token) {
         throw new Error(data.error ?? "Não foi possível entrar");
       }
@@ -61,20 +70,24 @@ export default function LoginScreen() {
       setError("Informe o código da turma");
       return;
     }
+    if (loadingStudents) return;
     setLoadingStudents(true);
     setError(null);
     setStudents([]);
     setStudentId("");
     setClassName("");
     try {
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `${API_URL}/api/auth/class-students?code=${encodeURIComponent(code)}`,
+        {},
+        15000,
       );
-      const data = await res.json();
+      const data = await parseResponseJson<ClassStudentsResponse>(res);
       if (!res.ok) throw new Error(data.error ?? "Turma não encontrada");
-      setClassName(data.className);
-      setStudents(data.students);
-      if (data.students.length === 1) setStudentId(data.students[0].id);
+      const loadedStudents = data.students ?? [];
+      setClassName(data.className ?? "");
+      setStudents(loadedStudents);
+      if (loadedStudents.length === 1) setStudentId(loadedStudents[0].id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao buscar turma");
     } finally {
@@ -83,6 +96,7 @@ export default function LoginScreen() {
   }
 
   async function handleClassLogin() {
+    if (loading) return;
     if (!studentId) {
       setError("Selecione seu nome");
       return;
@@ -90,7 +104,7 @@ export default function LoginScreen() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_URL}/api/auth/login-class`, {
+      const res = await fetchWithTimeout(`${API_URL}/api/auth/login-class`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -98,7 +112,7 @@ export default function LoginScreen() {
           studentId,
         }),
       });
-      const data = await res.json();
+      const data = await parseResponseJson<LoginResponse>(res);
       if (!res.ok || !data.token) {
         throw new Error(data.error ?? "Não foi possível entrar");
       }
@@ -172,13 +186,18 @@ export default function LoginScreen() {
           disabled={loading || !studentId}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <View style={styles.loadingButtonContent}>
+              <ActivityIndicator color="#fff" />
+              <Text style={styles.buttonText}>Entrando…</Text>
+            </View>
           ) : (
             <Text style={styles.buttonText}>Entrar</Text>
           )}
         </Pressable>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
+
+        <AppVersion />
 
         <Pressable onPress={() => setUseClassCode(false)} style={styles.link}>
           <Text style={styles.linkText}>Entrar com e-mail e senha</Text>
@@ -219,13 +238,18 @@ export default function LoginScreen() {
         disabled={loading}
       >
         {loading ? (
-          <ActivityIndicator color="#fff" />
+          <View style={styles.loadingButtonContent}>
+            <ActivityIndicator color="#fff" />
+            <Text style={styles.buttonText}>Entrando…</Text>
+          </View>
         ) : (
           <Text style={styles.buttonText}>Entrar</Text>
         )}
       </Pressable>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
+
+      <AppVersion />
 
       <Pressable onPress={() => setUseClassCode(true)} style={styles.linkMuted}>
         <Text style={styles.linkMutedText}>Tenho código da turma (sem senha)</Text>
@@ -285,6 +309,11 @@ const styles = StyleSheet.create({
   },
   outlineText: { color: colors.primary, fontWeight: "600" },
   buttonDisabled: { opacity: 0.6 },
+  loadingButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
   buttonText: { color: "#fff", fontWeight: "700", fontSize: 16 },
   error: { color: "#b91c1c", marginTop: spacing.md, textAlign: "center" },
   link: { marginTop: spacing.lg, alignItems: "center" },

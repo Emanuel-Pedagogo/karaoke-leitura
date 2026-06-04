@@ -71,13 +71,29 @@ export function VoiceAnalysisPanel({
   const [error, setError] = useState<string | null>(null);
   const [isOfflineSaved, setIsOfflineSaved] = useState(false);
   const ranRef = useRef(false);
+  const retriedRef = useRef(false);
 
   useEffect(() => {
     ranRef.current = false;
     setPayload(null);
     setError(null);
     setIsOfflineSaved(false);
+    retriedRef.current = false;
   }, [attemptKey]);
+
+  function shouldRetryAnalysis(message: string) {
+    const lower = message.toLowerCase();
+    return (
+      !lower.includes("api_key_invalid") &&
+      !lower.includes("api key not valid") &&
+      !lower.includes("consentimento") &&
+      !lower.includes("autoriz")
+    );
+  }
+
+  function wait(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
 
   async function saveOffline(uri: string) {
     if (!onOfflineSave) {
@@ -141,6 +157,12 @@ export function VoiceAnalysisPanel({
       onSuccess(data);
     } catch (e) {
       const raw = e instanceof Error ? e.message : "Não foi possível analisar com o Gemini";
+      if (!retriedRef.current && shouldRetryAnalysis(raw)) {
+        retriedRef.current = true;
+        await wait(1200);
+        await analyzeUri(uri);
+        return;
+      }
       if (onOfflineSave && isLikelyNetworkError(raw)) {
         try {
           await saveOffline(uri);
@@ -176,7 +198,11 @@ export function VoiceAnalysisPanel({
       <View style={styles.wrap}>
         <View style={styles.loadingRow}>
           <ActivityIndicator color={colors.primary} />
-          <Text style={styles.muted}>Analisando sua leitura com IA…</Text>
+          <Text style={styles.muted}>
+            {retriedRef.current
+              ? "A primeira tentativa falhou. Tentando novamente…"
+              : "Analisando sua leitura com IA…"}
+          </Text>
         </View>
       </View>
     );
