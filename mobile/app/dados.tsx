@@ -17,6 +17,8 @@ import {
   eraseVoiceData,
   fetchPrivacyStatus,
 } from "@/lib/api";
+import { clearCache } from "@/lib/db";
+import { clearPendingReadings } from "@/lib/offline-audio";
 import { clearAuthToken } from "@/lib/session";
 import { colors, radius, spacing } from "@/lib/theme";
 
@@ -61,6 +63,8 @@ export default function DadosScreen() {
               setErasing(true);
               try {
                 const data = await eraseVoiceData();
+                await clearPendingReadings();
+                await clearCache();
                 Alert.alert("Pronto", data.message ?? "Dados apagados.");
                 await loadStatus();
               } catch (e) {
@@ -97,6 +101,8 @@ export default function DadosScreen() {
               try {
                 const data = await deleteAccount();
                 await clearAuthToken();
+                await clearPendingReadings();
+                await clearCache();
                 Alert.alert(
                   "Conta encerrada",
                   data.message ?? "Sua conta foi excluída.",

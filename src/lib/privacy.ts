@@ -1,5 +1,5 @@
 /** Versão atual da política — atualize ao mudar o texto em /privacidade */
-export const PRIVACY_POLICY_VERSION = "2026-05-v1";
+export const PRIVACY_POLICY_VERSION = "2026-06-v1";
 
 export type ConsentPayload = {
   acceptPrivacy: boolean;

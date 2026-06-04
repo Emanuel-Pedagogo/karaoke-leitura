@@ -5,9 +5,16 @@ import {
   sessionCookieOptions,
   verifyPassword,
 } from "@/lib/auth";
+import { rateLimitByRequest } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   try {
+    const limited = rateLimitByRequest(request, "auth:login", {
+      limit: 10,
+      windowMs: 60_000,
+    });
+    if (limited) return limited;
+
     const { email, password } = await request.json();
     if (!email || !password) {
       return NextResponse.json(

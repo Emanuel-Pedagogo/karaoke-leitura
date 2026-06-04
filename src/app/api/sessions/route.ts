@@ -24,6 +24,7 @@ export async function POST(request: Request) {
     const {
       studentId: bodyStudentId,
       textId,
+      clientSessionId,
       durationSeconds,
       speedMultiplier,
       omissions,
@@ -41,6 +42,41 @@ export async function POST(request: Request) {
 
     if (!textId) {
       return jsonWithCors({ error: "Dados inválidos" }, { status: 400 });
+    }
+
+    const normalizedClientSessionId =
+      typeof clientSessionId === "string" && clientSessionId.trim()
+        ? clientSessionId.trim()
+        : undefined;
+
+    if (normalizedClientSessionId) {
+      const existingSession = await prisma.readingSession.findUnique({
+        where: { clientSessionId: normalizedClientSessionId },
+      });
+
+      if (existingSession) {
+        if (existingSession.studentId !== studentId) {
+          return jsonWithCors(
+            { error: "Sessão de leitura pertence a outro aluno" },
+            { status: 409 },
+          );
+        }
+
+        const profile = await prisma.studentProfile.findUnique({
+          where: { id: studentId },
+          select: { comboStreak: true, level: true, xp: true },
+        });
+
+        return jsonWithCors({
+          session: existingSession,
+          comboStreak: profile?.comboStreak ?? 0,
+          level: profile?.level ?? levelFromXp(profile?.xp ?? 0),
+          leveledUp: false,
+          duplicate: true,
+          unlockedAchievements: [],
+          missionsCompleted: [],
+        });
+      }
     }
 
     const [allowVoice, text, currentProfile] = await Promise.all([
@@ -65,8 +101,14 @@ export async function POST(request: Request) {
       substitutions: Math.max(0, Number(substitutions) || 0),
       hesitations: Math.max(0, Number(hesitations) || 0),
     };
-    const normalizedProsodyScore =
-      prosodyScore != null ? Number(prosodyScore) : undefined;
+    const parsedProsodyScore = Number(prosodyScore);
+    const normalizedProsodyScore = Number.isFinite(parsedProsodyScore)
+      ? Math.round(parsedProsodyScore)
+      : undefined;
+    const parsedSpeedMultiplier = Number(speedMultiplier);
+    const normalizedSpeedMultiplier = Number.isFinite(parsedSpeedMultiplier)
+      ? parsedSpeedMultiplier
+      : 1;
     const metrics = calculateSessionMetrics({
       wordCount: text.wordCount,
       durationSeconds: duration,
@@ -78,10 +120,11 @@ export async function POST(request: Request) {
     const readingSession = await prisma.readingSession.create({
       data: {
         studentId,
+        clientSessionId: normalizedClientSessionId,
         textId,
         completedAt: new Date(),
         durationSeconds: duration,
-        speedMultiplier: speedMultiplier ?? 1,
+        speedMultiplier: normalizedSpeedMultiplier,
         ...counts,
         prosodyScore: normalizedProsodyScore,
         accuracyPct: metrics.accuracyPct,
@@ -136,6 +179,7 @@ export async function POST(request: Request) {
       comboStreak: profile?.comboStreak ?? 0,
       level: leveledUp ? newLevel : student.level,
       leveledUp,
+      duplicate: false,
       ...gamification,
     });
   } catch (e) {

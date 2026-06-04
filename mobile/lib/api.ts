@@ -345,6 +345,7 @@ export async function prefetchTextsForOffline(texts: ReadingTextSummary[]) {
 export async function saveReadingSession(payload: {
   studentId: string;
   textId: string;
+  clientSessionId?: string;
   durationSeconds: number;
   speedMultiplier: number;
   omissions: number;

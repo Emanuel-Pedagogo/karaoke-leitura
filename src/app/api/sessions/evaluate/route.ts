@@ -39,6 +39,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (audioFile.size > 8 * 1024 * 1024) {
+      return jsonWithCors(
+        { error: "Áudio muito grande. Grave leituras de até alguns minutos." },
+        { status: 413 },
+      );
+    }
+
     // 4. Buscar o texto de referência no banco de dados
     const readingText = await prisma.readingText.findUnique({
       where: { id: textId },

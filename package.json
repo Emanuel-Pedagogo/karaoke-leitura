@@ -22,7 +22,8 @@
     "db:wipe-users": "tsx prisma/wipe-users.ts",
     "db:wipe-users:seed": "tsx prisma/wipe-users.ts --seed",
     "db:studio": "prisma studio",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "test": "tsx --test tests/**/*.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.7.0",

@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { rateLimitByRequest } from "@/lib/rate-limit";
 
 export async function GET(request: Request) {
+  const limited = rateLimitByRequest(request, "auth:class-students", {
+    limit: 20,
+    windowMs: 60_000,
+  });
+  if (limited) return limited;
+
   const code = new URL(request.url).searchParams.get("code")?.trim().toUpperCase();
   if (!code) {
     return NextResponse.json({ error: "Informe o código da turma" }, { status: 400 });

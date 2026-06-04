@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSessionToken, sessionCookieOptions } from "@/lib/auth";
+import { rateLimitByRequest } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   try {
+    const limited = rateLimitByRequest(request, "auth:login-class", {
+      limit: 20,
+      windowMs: 60_000,
+    });
+    if (limited) return limited;
+
     const { classCode, studentId } = await request.json();
     if (!classCode || !studentId) {
       return NextResponse.json(

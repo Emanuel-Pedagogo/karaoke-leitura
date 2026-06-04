@@ -8,7 +8,7 @@ export default function PrivacidadePage() {
         <h1 className="text-3xl font-bold text-foreground">Política de Privacidade</h1>
         <p className="text-muted">
           Versão {PRIVACY_POLICY_VERSION} · Karaokê de Leitura · Última atualização:
-          maio/2026
+          junho/2026
         </p>
       </header>
 

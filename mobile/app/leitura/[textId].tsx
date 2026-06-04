@@ -33,7 +33,10 @@ import {
   saveReadingSession,
   type ReadingText,
 } from "@/lib/api";
-import { persistPendingReading } from "@/lib/offline-audio";
+import {
+  createClientSessionId,
+  persistPendingReading,
+} from "@/lib/offline-audio";
 import { isDeviceOffline } from "@/lib/network";
 import { hasClassSession } from "@/lib/class-session";
 import { colors, radius, spacing } from "@/lib/theme";
@@ -74,6 +77,7 @@ export default function ReadingScreen() {
   } = useReadingRecorder();
   const startRef = useRef<number | null>(null);
   const durationRef = useRef(0);
+  const clientSessionIdRef = useRef(createClientSessionId());
 
   useEffect(() => {
     async function loadScreenData() {
@@ -92,6 +96,7 @@ export default function ReadingScreen() {
         setAttemptKey((k) => k + 1);
         durationRef.current = 0;
         startRef.current = null;
+        clientSessionIdRef.current = createClientSessionId();
       }
       try {
         const [textData, studentData, privacy] = await Promise.all([
@@ -168,6 +173,8 @@ export default function ReadingScreen() {
       try {
         await persistPendingReading({
           uri,
+          studentId,
+          clientSessionId: clientSessionIdRef.current,
           textId: text.id,
           durationSeconds: durationRef.current,
           speedMultiplier: speed,
@@ -182,13 +189,15 @@ export default function ReadingScreen() {
     }
 
     setPhase("analyzing");
-  }, [isRecording, recordingUri, speed, stopRecording, text]);
+  }, [isRecording, recordingUri, speed, stopRecording, studentId, text]);
 
   const handleOfflineSave = useCallback(
     async (uri: string) => {
       if (!text) return;
       await persistPendingReading({
         uri,
+        studentId,
+        clientSessionId: clientSessionIdRef.current,
         textId: text.id,
         durationSeconds: durationRef.current,
         speedMultiplier: speed,
@@ -196,7 +205,7 @@ export default function ReadingScreen() {
       setSavedOffline(true);
       setPhase("done");
     },
-    [text, speed],
+    [studentId, text, speed],
   );
 
   const saveAfterAi = useCallback(
@@ -224,6 +233,7 @@ export default function ReadingScreen() {
         try {
           await saveReadingSession({
             studentId,
+            clientSessionId: clientSessionIdRef.current,
             textId: text.id,
             durationSeconds: duration,
             speedMultiplier: speed,
@@ -234,15 +244,27 @@ export default function ReadingScreen() {
             ...result,
           });
         } catch (saveError) {
+          if (recordingUri) {
+            await persistPendingReading({
+              uri: recordingUri,
+              studentId,
+              clientSessionId: clientSessionIdRef.current,
+              textId: text.id,
+              durationSeconds: duration,
+              speedMultiplier: speed,
+              evaluatedPayload: payload,
+            });
+            setSavedOffline(true);
+          }
           setError(
             saveError instanceof Error
-              ? saveError.message
-              : "Erro ao salvar a sessão",
+              ? `${saveError.message} A leitura foi guardada para sincronizar depois.`
+              : "Erro ao salvar a sessão. A leitura foi guardada para sincronizar depois.",
           );
         }
       }
     },
-    [speed, studentComboStreak, studentId, text],
+    [recordingUri, speed, studentComboStreak, studentId, text],
   );
 
   const handleTryAgain = () => {
@@ -256,6 +278,7 @@ export default function ReadingScreen() {
     setAttemptKey((k) => k + 1);
     durationRef.current = 0;
     startRef.current = null;
+    clientSessionIdRef.current = createClientSessionId();
   };
 
   if (loading) {

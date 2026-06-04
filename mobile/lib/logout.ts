@@ -1,11 +1,13 @@
 import { Alert } from "react-native";
 import type { Router } from "expo-router";
 import { clearClassCode } from "@/lib/class-session";
+import { clearCache } from "@/lib/db";
 import { clearAuthToken } from "@/lib/session";
 
 export async function performLogout(router: Router) {
   await clearAuthToken();
   await clearClassCode();
+  await clearCache();
   router.replace("/welcome");
 }
 

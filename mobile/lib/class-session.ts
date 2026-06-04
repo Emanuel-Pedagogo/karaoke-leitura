@@ -1,5 +1,5 @@
 import { API_URL } from "./config";
-import { removeCache } from "./db";
+import { clearCache } from "./db";
 import { setAuthToken } from "./session";
 import * as SecureStore from "expo-secure-store";
 
@@ -60,6 +60,6 @@ export async function switchToStudent(
     throw new Error(data.error ?? "Não foi possível trocar de aluno");
   }
   await setAuthToken(data.token);
-  await removeCache("privacyStatus");
+  await clearCache();
   return { name: data.name as string };
 }

@@ -264,6 +264,8 @@ model ReadingSession {
 
   id               String   @id @default(cuid())
 
+  clientSessionId  String?  @unique
+
   studentId        String
 
   student          StudentProfile @relation(fields: [studentId], references: [id])
