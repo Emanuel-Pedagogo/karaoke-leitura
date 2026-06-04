@@ -12,6 +12,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   averageWcpm,
   calculateSessionMetrics,
+  comboMultiplierFromStreak,
   karaokeSpeedHint,
   METRIC_WCPM_SHORT,
   suggestKaraokeSpeed,
@@ -45,6 +46,7 @@ export default function ReadingScreen() {
   const [text, setText] = useState<ReadingText | null>(null);
   const [studentId, setStudentId] = useState<string | undefined>();
   const [studentName, setStudentName] = useState("Estudante");
+  const [studentComboStreak, setStudentComboStreak] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>("ready");
@@ -100,6 +102,7 @@ export default function ReadingScreen() {
         setText(textData);
         setStudentId(studentData?.id);
         setStudentName(studentData?.name ?? "Estudante");
+        setStudentComboStreak(studentData?.comboStreak ?? 0);
         setHasVoiceConsent(privacy.hasVoiceConsent);
 
         const avgWcpm = averageWcpm(
@@ -212,6 +215,7 @@ export default function ReadingScreen() {
         durationSeconds: duration,
         ...counts,
         prosodyScore: payload.prosodyScore,
+        comboMultiplier: comboMultiplierFromStreak(studentComboStreak),
       });
       setMetrics(result);
       setPhase("done");
@@ -238,7 +242,7 @@ export default function ReadingScreen() {
         }
       }
     },
-    [speed, studentId, text],
+    [speed, studentComboStreak, studentId, text],
   );
 
   const handleTryAgain = () => {

@@ -132,7 +132,7 @@
 
 **Fala:**
 
-"XP é experiência. Cada leitura dá XP — mínimo 10. Quanto melhor precisão, ritmo e prosódia, mais XP."
+"XP é experiência. Cada leitura dá XP — mínimo 5. Quanto melhor precisão, ritmo e prosódia, mais XP."
 
 "A cada **500 XP**, sobe um nível. Na tela inicial tem barra: 'faltam X para o próximo nível'."
 

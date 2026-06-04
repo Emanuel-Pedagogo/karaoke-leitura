@@ -28,6 +28,9 @@ const PROSODY_FACTOR: Record<number, number> = {
   5: 1.3,
 };
 
+const SESSION_SCORE_SCALE = 0.25;
+const MIN_SESSION_XP = 5;
+
 export function tokenizeText(content: string): string[] {
   return content.split(/\s+/).filter(Boolean);
 }
@@ -45,9 +48,9 @@ export function calculateSessionMetrics(
   const prosodyFactor = PROSODY_FACTOR[input.prosodyScore ?? 3] ?? 1;
   const combo = input.comboMultiplier ?? 1;
   const score = Math.round(
-    wcpm * (accuracyPct / 100) * prosodyFactor * combo * 10,
+    wcpm * (accuracyPct / 100) * prosodyFactor * combo * SESSION_SCORE_SCALE,
   );
-  const xpEarned = Math.max(10, Math.round(score / 2));
+  const xpEarned = Math.max(MIN_SESSION_XP, Math.round(score / 2));
 
   return {
     totalErrors,

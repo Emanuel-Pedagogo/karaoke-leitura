@@ -1,4 +1,8 @@
-import { levelFromXp } from "@karaoke/shared";
+import {
+  calculateSessionMetrics,
+  comboMultiplierFromStreak,
+  levelFromXp,
+} from "@karaoke/shared";
 import { prisma } from "@/lib/prisma";
 import { jsonWithCors, optionsWithCors } from "@/lib/api-cors";
 import { getSessionFromRequest } from "@/lib/auth";
@@ -26,10 +30,6 @@ export async function POST(request: Request) {
       substitutions,
       hesitations,
       prosodyScore,
-      accuracyPct,
-      wcpm,
-      score,
-      xpEarned,
       spokenTranscript,
       asrSource,
     } = body;
@@ -43,23 +43,51 @@ export async function POST(request: Request) {
       return jsonWithCors({ error: "Dados inválidos" }, { status: 400 });
     }
 
-    const allowVoice = await studentHasVoiceConsent(studentId);
+    const [allowVoice, text, currentProfile] = await Promise.all([
+      studentHasVoiceConsent(studentId),
+      prisma.readingText.findUnique({
+        where: { id: textId },
+        select: { wordCount: true },
+      }),
+      prisma.studentProfile.findUnique({
+        where: { id: studentId },
+        select: { classId: true, comboStreak: true, level: true },
+      }),
+    ]);
+
+    if (!text || !currentProfile) {
+      return jsonWithCors({ error: "Dados inválidos" }, { status: 400 });
+    }
+
+    const duration = Math.max(1, Number(durationSeconds) || 1);
+    const counts = {
+      omissions: Math.max(0, Number(omissions) || 0),
+      substitutions: Math.max(0, Number(substitutions) || 0),
+      hesitations: Math.max(0, Number(hesitations) || 0),
+    };
+    const normalizedProsodyScore =
+      prosodyScore != null ? Number(prosodyScore) : undefined;
+    const metrics = calculateSessionMetrics({
+      wordCount: text.wordCount,
+      durationSeconds: duration,
+      ...counts,
+      prosodyScore: normalizedProsodyScore,
+      comboMultiplier: comboMultiplierFromStreak(currentProfile.comboStreak),
+    });
 
     const readingSession = await prisma.readingSession.create({
       data: {
         studentId,
         textId,
         completedAt: new Date(),
-        durationSeconds,
+        durationSeconds: duration,
         speedMultiplier: speedMultiplier ?? 1,
-        omissions: omissions ?? 0,
-        substitutions: substitutions ?? 0,
-        hesitations: hesitations ?? 0,
-        prosodyScore,
-        accuracyPct,
-        wcpm,
-        score,
-        xpEarned,
+        ...counts,
+        prosodyScore: normalizedProsodyScore,
+        accuracyPct: metrics.accuracyPct,
+        wcpm: metrics.wcpm,
+        score: metrics.score,
+        xpEarned: metrics.xpEarned,
         spokenTranscript:
           allowVoice && spokenTranscript?.trim()
             ? spokenTranscript.trim()
@@ -71,15 +99,15 @@ export async function POST(request: Request) {
     const student = await prisma.studentProfile.update({
       where: { id: studentId },
       data: {
-        xp: { increment: xpEarned ?? 0 },
+        xp: { increment: metrics.xpEarned },
         comboStreak:
-          (accuracyPct ?? 0) >= 90
+          metrics.accuracyPct >= 90
             ? { increment: 1 }
             : { set: 0 },
       },
     });
 
-    const leveledUp = levelFromXp(student.xp) !== student.level;
+    const leveledUp = levelFromXp(student.xp) !== currentProfile.level;
     const newLevel = levelFromXp(student.xp);
     if (leveledUp) {
       await prisma.studentProfile.update({
@@ -97,8 +125,8 @@ export async function POST(request: Request) {
       ? await processAfterReading({
           studentId,
           classId: profile.classId,
-          accuracyPct: accuracyPct ?? 0,
-          wcpm: wcpm ?? 0,
+          accuracyPct: metrics.accuracyPct,
+          wcpm: metrics.wcpm,
           completedAt: readingSession.completedAt ?? new Date(),
         })
       : { unlockedAchievements: [], missionsCompleted: [] };

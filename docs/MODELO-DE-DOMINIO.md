@@ -64,7 +64,8 @@ wcpm = palavrasCorretas / (duracaoSegundos / 60)
 **Pontuação base**
 
 ```
-pontuacao = round(wcpm × (precisao/100) × fatorProsodia × comboMultiplier)
+pontuacao = round(wcpm × (precisao/100) × fatorProsodia × comboMultiplier × 0,25)
+xpSessao = max(5, round(pontuacao / 2))
 ```
 
 ## Gamificação

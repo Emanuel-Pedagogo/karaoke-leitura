@@ -1,7 +1,7 @@
 import * as FileSystem from "expo-file-system";
 import { getPendingSessions, removePendingSession } from "./db";
 import { evaluateAudioWithGemini, saveReadingSession } from "./api";
-import { calculateSessionMetrics } from "@karaoke/shared";
+import { calculateSessionMetrics, comboMultiplierFromStreak } from "@karaoke/shared";
 import { fetchText, fetchStudentProfile } from "./api";
 import { isDeviceOffline } from "./network";
 
@@ -54,6 +54,7 @@ export async function syncPendingSessions() {
             durationSeconds: session.durationSeconds,
             ...counts,
             prosodyScore: ev.scores?.prosody ?? 3,
+            comboMultiplier: comboMultiplierFromStreak(student.comboStreak),
           });
 
           await saveReadingSession({
