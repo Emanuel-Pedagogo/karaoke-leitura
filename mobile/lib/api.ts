@@ -1,4 +1,7 @@
 import { API_URL } from "./config";
+import { getCache, setCache } from "./db";
+import { isDeviceOffline } from "./network";
+import { cachePrivacyStatus, type PrivacyStatus } from "./privacy-cache";
 import { clearAuthToken, getAuthToken } from "./session";
 import type { ReadingErrorCounts } from "@karaoke/shared";
 
@@ -59,14 +62,21 @@ export type ReadingText = ReadingTextSummary & {
   content: string;
 };
 
-export async function fetchPrivacyStatus() {
+export async function fetchPrivacyStatus(): Promise<PrivacyStatus> {
+  if (await isDeviceOffline()) {
+    const cached = await getCache<PrivacyStatus>("privacyStatus");
+    if (cached) return cached;
+    throw new Error(
+      "Você está offline. Abra o app com internet uma vez antes de usar sem conexão.",
+    );
+  }
+
   const response = await fetch(`${API_URL}/api/privacy/consent`, {
     headers: await authHeaders(),
   });
-  return parseJson<{
-    needsPrivacy: boolean;
-    hasVoiceConsent: boolean;
-  }>(response);
+  const data = await parseJson<PrivacyStatus>(response);
+  await cachePrivacyStatus(data);
+  return data;
 }
 
 export async function eraseVoiceData() {
@@ -106,6 +116,12 @@ export async function submitPrivacyConsent(payload: {
 }
 
 export async function fetchStudentProfile() {
+  if (await isDeviceOffline()) {
+    const cached = await getCache<{ student: StudentProfile | null }>("studentProfile");
+    if (cached) return cached.student;
+    throw new Error("Você está offline e não há dados salvos. Conecte-se à internet.");
+  }
+
   const response = await fetch(`${API_URL}/api/student/me`, {
     headers: await authHeaders(),
   });
@@ -114,18 +130,34 @@ export async function fetchStudentProfile() {
     throw new Error("AUTH_REQUIRED");
   }
   const data = await parseJson<{ student: StudentProfile | null }>(response);
+  await setCache("studentProfile", data);
   return data.student;
 }
 
 export async function fetchTexts() {
+  if (await isDeviceOffline()) {
+    const cached = await getCache<{ texts: ReadingTextSummary[] }>("texts");
+    if (cached) return cached.texts;
+    throw new Error("Você está offline e não há textos salvos. Conecte-se à internet.");
+  }
+
   const response = await fetch(`${API_URL}/api/texts`);
   const data = await parseJson<{ texts: ReadingTextSummary[] }>(response);
+  await setCache("texts", data);
   return data.texts;
 }
 
 export async function fetchText(textId: string) {
+  const cacheKey = `text_${textId}`;
+  if (await isDeviceOffline()) {
+    const cached = await getCache<{ text: ReadingText }>(cacheKey);
+    if (cached) return cached.text;
+    throw new Error("Você está offline e este texto não está salvo. Conecte-se à internet.");
+  }
+
   const response = await fetch(`${API_URL}/api/texts/${textId}`);
   const data = await parseJson<{ text: ReadingText }>(response);
+  await setCache(cacheKey, data);
   return data.text;
 }
 
@@ -240,11 +272,18 @@ export type ClassJoinRequest = {
 };
 
 export async function fetchStudentClassRequests() {
+  if (await isDeviceOffline()) {
+    const cached = await getCache<{ requests: ClassJoinRequest[] }>("classRequests");
+    if (cached) return cached.requests;
+    return [];
+  }
+
   const response = await fetch(`${API_URL}/api/class-requests/student`, {
     headers: await authHeaders(),
   });
   const data = await parseJson<{ requests: ClassJoinRequest[] }>(response);
-  return data.requests;
+  await setCache("classRequests", data);
+  return data.requests ?? [];
 }
 
 export async function requestJoinClass(classCode: string) {
@@ -281,11 +320,26 @@ export type RankingStudent = {
 };
 
 export async function fetchClassRanking() {
+  if (await isDeviceOffline()) {
+    const cached = await getCache<{ ranking: RankingStudent[] }>("classRanking");
+    if (cached) return cached.ranking;
+    throw new Error("Você está offline e não há ranking salvo. Conecte-se à internet.");
+  }
+
   const response = await fetch(`${API_URL}/api/student/ranking`, {
     headers: await authHeaders(),
   });
   const data = await parseJson<{ ranking: RankingStudent[] }>(response);
+  await setCache("classRanking", data);
   return data.ranking;
+}
+
+/** Baixa o conteúdo completo dos textos para leitura offline. */
+export async function prefetchTextsForOffline(texts: ReadingTextSummary[]) {
+  if (await isDeviceOffline()) return;
+  await Promise.all(
+    texts.slice(0, 15).map((item) => fetchText(item.id).catch(() => null)),
+  );
 }
 
 export async function saveReadingSession(payload: {

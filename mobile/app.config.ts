@@ -32,6 +32,17 @@ const config: ExpoConfig = {
           "O microfone é usado para gravar a leitura em voz alta e analisar fluência, apenas com seu consentimento (LGPD).",
       },
     ],
+    [
+      "expo-build-properties",
+      {
+        android: {
+          compileSdkVersion: 35,
+          targetSdkVersion: 35,
+          buildToolsVersion: "35.0.0",
+        },
+      },
+    ],
+    "expo-sqlite",
   ],
   experiments: {
     typedRoutes: true,

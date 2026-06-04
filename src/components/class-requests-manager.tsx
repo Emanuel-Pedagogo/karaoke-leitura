@@ -68,7 +68,7 @@ export function ClassRequestsManager({ classId }: { classId: string }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       
-      setMessage({ text: `Convite enviado para ${data.studentName}`, type: "success" });
+      setMessage({ text: `Convite enviado para ${data.studentName}. O aluno verá em Minha Turma no app (mesmo e-mail da conta).`, type: "success" });
       setEmail("");
       fetchRequests();
     } catch (e) {
@@ -91,7 +91,9 @@ export function ClassRequestsManager({ classId }: { classId: string }) {
       <Card className="p-4 space-y-4">
         <h2 className="text-lg font-bold">Convidar Aluno</h2>
         <p className="text-sm text-muted">
-          Se o aluno já possui conta, digite o e-mail exato dele para enviar um convite. O aluno verá o convite no aplicativo dele.
+          Se o aluno já possui conta, digite o <strong>e-mail exato</strong> do
+          cadastro dele. O convite aparece no app do aluno em{" "}
+          <strong>Minha Turma</strong> (banner verde na tela inicial).
         </p>
         <form onSubmit={handleInvite} className="flex gap-2">
           <input

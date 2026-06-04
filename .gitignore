@@ -50,3 +50,4 @@ mobile/.env.production
 .expo
 mobile/google-service-account.json
 mobile/credentials.json
+karaoke-leitura-play-*.json

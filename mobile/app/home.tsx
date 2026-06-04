@@ -11,23 +11,37 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { DIFFICULTY_LABELS } from "@karaoke/shared";
 import {
   fetchPrivacyStatus,
+  fetchStudentClassRequests,
   fetchStudentProfile,
   fetchTexts,
+  prefetchTextsForOffline,
+  type ClassJoinRequest,
   type ReadingTextSummary,
   type StudentProfile,
 } from "@/lib/api";
+import { hasClassSession } from "@/lib/class-session";
+import { getPendingSessions } from "@/lib/db";
+import { isDeviceOffline } from "@/lib/network";
 import { confirmLogout } from "@/lib/logout";
+import { syncPendingSessions } from "@/lib/sync";
 import { colors, radius, spacing } from "@/lib/theme";
 
 export default function HomeScreen() {
   const router = useRouter();
   const [student, setStudent] = useState<StudentProfile | null>(null);
   const [texts, setTexts] = useState<ReadingTextSummary[]>([]);
+  const [classRequests, setClassRequests] = useState<ClassJoinRequest[]>([]);
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
+  const [isOffline, setIsOffline] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [classSession, setClassSession] = useState(false);
 
   const loadData = useCallback(async () => {
     setError(null);
+    const offline = await isDeviceOffline();
+    setIsOffline(offline);
     try {
       const privacy = await fetchPrivacyStatus();
       if (privacy.needsPrivacy) {
@@ -35,12 +49,23 @@ export default function HomeScreen() {
         return;
       }
 
-      const [studentData, textsData] = await Promise.all([
+      const [studentData, textsData, requestsData, pendingSessions, inClassSession] =
+        await Promise.all([
         fetchStudentProfile(),
         fetchTexts(),
+        fetchStudentClassRequests().catch(() => [] as ClassJoinRequest[]),
+        getPendingSessions(),
+        hasClassSession(),
       ]);
       setStudent(studentData);
       setTexts(textsData);
+      setClassRequests(requestsData);
+      setPendingSyncCount(pendingSessions.length);
+      setClassSession(inClassSession);
+
+      if (!offline && textsData.length > 0) {
+        void prefetchTextsForOffline(textsData);
+      }
     } catch (loadError) {
       if (
         loadError instanceof Error &&
@@ -66,7 +91,25 @@ export default function HomeScreen() {
     }, [loadData]),
   );
 
+  const handleSync = useCallback(async () => {
+    setSyncing(true);
+    try {
+      await syncPendingSessions();
+      const pendingSessions = await getPendingSessions();
+      setPendingSyncCount(pendingSessions.length);
+      if (pendingSessions.length === 0) {
+        await loadData();
+      }
+    } finally {
+      setSyncing(false);
+    }
+  }, [loadData]);
+
   const firstText = texts[0];
+  const teacherInvites = classRequests.filter(
+    (r) => r.type === "TEACHER_INVITE",
+  );
+  const pendingJoins = classRequests.filter((r) => r.type === "CODE_JOIN");
 
   if (loading) {
     return (
@@ -86,6 +129,61 @@ export default function HomeScreen() {
       </Text>
       {student?.className ? (
         <Text style={styles.subtitle}>{student.className}</Text>
+      ) : null}
+
+      {teacherInvites.length > 0 ? (
+        <Pressable
+          style={styles.inviteBanner}
+          onPress={() => router.push("/turma")}
+        >
+          <Text style={styles.inviteBannerTitle}>
+            Convite da turma ({teacherInvites.length})
+          </Text>
+          <Text style={styles.inviteBannerText}>
+            {teacherInvites[0].class.name} convidou você. Toque para aceitar ou
+            recusar.
+          </Text>
+        </Pressable>
+      ) : null}
+
+      {pendingJoins.length > 0 ? (
+        <Pressable
+          style={styles.pendingBanner}
+          onPress={() => router.push("/turma")}
+        >
+          <Text style={styles.pendingBannerText}>
+            {pendingJoins.length} solicitação(ões) aguardando o professor — ver
+            em Minha Turma
+          </Text>
+        </Pressable>
+      ) : null}
+
+      {isOffline ? (
+        <View style={styles.offlineBanner}>
+          <Text style={styles.offlineBannerText}>
+            Modo offline — textos salvos no celular estão disponíveis para leitura.
+          </Text>
+        </View>
+      ) : null}
+
+      {pendingSyncCount > 0 ? (
+        <View style={styles.syncBanner}>
+          <Text style={styles.syncBannerTitle}>Sincronização pendente</Text>
+          <Text style={styles.syncBannerText}>
+            Você tem {pendingSyncCount} leitura(s) salva(s) offline. Elas serão avaliadas automaticamente quando houver conexão com a internet.
+          </Text>
+          {!isOffline ? (
+            <Pressable
+              onPress={() => void handleSync()}
+              disabled={syncing}
+              style={styles.syncButton}
+            >
+              <Text style={styles.syncButtonText}>
+                {syncing ? "Sincronizando…" : "Sincronizar agora"}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
       ) : null}
 
       {error ? (
@@ -123,8 +221,10 @@ export default function HomeScreen() {
             <Pressable onPress={() => router.push("/ranking" as any)} style={styles.actionButton}>
               <Text style={styles.actionButtonText}>🏆 Ranking</Text>
             </Pressable>
-            <Pressable onPress={() => router.push("/turma" as any)} style={styles.actionButton}>
-              <Text style={styles.actionButtonText}>Minha Turma</Text>
+            <Pressable onPress={() => router.push("/turma")} style={styles.actionButton}>
+              <Text style={styles.actionButtonText}>
+                Minha Turma{classRequests.length > 0 ? ` (${classRequests.length})` : ""}
+              </Text>
             </Pressable>
             <Pressable onPress={() => router.push("/dados")} style={styles.actionButton}>
               <Text style={styles.actionButtonText}>🔒 Meus dados</Text>
@@ -159,11 +259,30 @@ export default function HomeScreen() {
       ) : null}
 
       <Pressable
-        onPress={() => confirmLogout(router)}
-        style={styles.logoutButton}
+        onPress={() =>
+          classSession
+            ? router.push("/trocar-aluno")
+            : confirmLogout(router)
+        }
+        style={classSession ? styles.nextStudentButton : styles.logoutButton}
       >
-        <Text style={styles.logoutText}>Trocar de aluno (sair)</Text>
+        <Text
+          style={
+            classSession ? styles.nextStudentText : styles.logoutText
+          }
+        >
+          {classSession ? "Próximo aluno →" : "Trocar de aluno (sair)"}
+        </Text>
       </Pressable>
+
+      {classSession ? (
+        <Pressable
+          onPress={() => confirmLogout(router)}
+          style={styles.logoutLink}
+        >
+          <Text style={styles.logoutLinkText}>Sair da turma</Text>
+        </Pressable>
+      ) : null}
     </ScrollView>
   );
 }
@@ -187,6 +306,82 @@ const styles = StyleSheet.create({
     color: colors.muted,
     marginTop: spacing.xs,
     marginBottom: spacing.lg,
+  },
+  inviteBanner: {
+    backgroundColor: "#ecfdf5",
+    borderColor: "#10b981",
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  inviteBannerTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#047857",
+    marginBottom: spacing.xs,
+  },
+  inviteBannerText: {
+    fontSize: 14,
+    color: "#065f46",
+    lineHeight: 20,
+  },
+  pendingBanner: {
+    backgroundColor: "#fffbeb",
+    borderColor: "#f59e0b",
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  pendingBannerText: {
+    fontSize: 14,
+    color: "#92400e",
+    lineHeight: 20,
+  },
+  syncBanner: {
+    backgroundColor: "#eff6ff",
+    borderColor: "#3b82f6",
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  syncBannerTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1d4ed8",
+    marginBottom: spacing.xs,
+  },
+  syncBannerText: {
+    fontSize: 14,
+    color: "#1e40af",
+    lineHeight: 20,
+  },
+  syncButton: {
+    marginTop: spacing.sm,
+    backgroundColor: "#1d4ed8",
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    alignItems: "center",
+  },
+  syncButtonText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 14,
+  },
+  offlineBanner: {
+    backgroundColor: "#f3f4f6",
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  offlineBannerText: {
+    fontSize: 14,
+    color: colors.muted,
+    lineHeight: 20,
   },
   heroCard: {
     backgroundColor: colors.primary,
@@ -292,5 +487,29 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     fontSize: 16,
     fontWeight: "700",
+  },
+  nextStudentButton: {
+    marginTop: spacing.xl,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    alignItems: "center",
+    alignSelf: "stretch",
+    backgroundColor: colors.primary,
+    borderRadius: radius.lg,
+  },
+  nextStudentText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  logoutLink: {
+    marginTop: spacing.md,
+    alignItems: "center",
+    paddingVertical: spacing.sm,
+  },
+  logoutLinkText: {
+    color: colors.muted,
+    fontSize: 14,
+    fontWeight: "600",
   },
 });

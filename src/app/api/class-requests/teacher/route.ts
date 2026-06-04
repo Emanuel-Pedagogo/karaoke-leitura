@@ -2,15 +2,32 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionFromRequest } from "@/lib/auth";
 
+async function resolveTeacherId(session: {
+  userId: string;
+  teacherId?: string;
+}) {
+  if (session.teacherId) return session.teacherId;
+  const teacher = await prisma.teacherProfile.findUnique({
+    where: { userId: session.userId },
+    select: { id: true },
+  });
+  return teacher?.id ?? null;
+}
+
 export async function GET(request: Request) {
   try {
     const session = await getSessionFromRequest(request);
-    if (!session || session.role !== "TEACHER" || !session.teacherId) {
+    if (!session || session.role !== "TEACHER") {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
+    const teacherId = await resolveTeacherId(session);
+    if (!teacherId) {
+      return NextResponse.json({ error: "Perfil de professor não encontrado" }, { status: 401 });
+    }
+
     const classes = await prisma.class.findMany({
-      where: { teacherId: session.teacherId },
+      where: { teacherId },
       select: { id: true },
     });
     const classIds = classes.map((c) => c.id);
@@ -48,8 +65,13 @@ export async function GET(request: Request) {
 export async function PUT(request: Request) {
   try {
     const session = await getSessionFromRequest(request);
-    if (!session || session.role !== "TEACHER" || !session.teacherId) {
+    if (!session || session.role !== "TEACHER") {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    }
+
+    const teacherId = await resolveTeacherId(session);
+    if (!teacherId) {
+      return NextResponse.json({ error: "Perfil de professor não encontrado" }, { status: 401 });
     }
 
     const { requestId, action } = await request.json();
@@ -62,7 +84,7 @@ export async function PUT(request: Request) {
       include: { class: true },
     });
 
-    if (!joinRequest || joinRequest.class.teacherId !== session.teacherId) {
+    if (!joinRequest || joinRequest.class.teacherId !== teacherId) {
       return NextResponse.json({ error: "Solicitação não encontrada" }, { status: 404 });
     }
 
@@ -97,8 +119,13 @@ export async function PUT(request: Request) {
 export async function POST(request: Request) {
   try {
     const session = await getSessionFromRequest(request);
-    if (!session || session.role !== "TEACHER" || !session.teacherId) {
+    if (!session || session.role !== "TEACHER") {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    }
+
+    const teacherId = await resolveTeacherId(session);
+    if (!teacherId) {
+      return NextResponse.json({ error: "Perfil de professor não encontrado" }, { status: 401 });
     }
 
     const { email, classId } = await request.json();
@@ -107,7 +134,7 @@ export async function POST(request: Request) {
     }
 
     const targetClass = await prisma.class.findFirst({
-      where: { id: classId, teacherId: session.teacherId },
+      where: { id: classId, teacherId },
     });
 
     if (!targetClass) {

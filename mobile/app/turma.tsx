@@ -25,10 +25,12 @@ export default function TurmaScreen() {
   const [student, setStudent] = useState<StudentProfile | null>(null);
   const [requests, setRequests] = useState<ClassJoinRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [classCode, setClassCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const loadData = useCallback(async () => {
+    setLoadError(null);
     try {
       const [studentData, requestsData] = await Promise.all([
         fetchStudentProfile(),
@@ -37,11 +39,19 @@ export default function TurmaScreen() {
       setStudent(studentData);
       setRequests(requestsData);
     } catch (e) {
-      console.error(e);
+      if (e instanceof Error && e.message === "AUTH_REQUIRED") {
+        router.replace("/welcome");
+        return;
+      }
+      setLoadError(
+        e instanceof Error
+          ? e.message
+          : "Não foi possível carregar suas solicitações.",
+      );
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [router]);
 
   useFocusEffect(
     useCallback(() => {
@@ -101,6 +111,15 @@ export default function TurmaScreen() {
         </Pressable>
         <Text style={styles.title}>Minha Turma</Text>
       </View>
+
+      {loadError ? (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorText}>{loadError}</Text>
+          <Pressable onPress={() => void loadData()} style={styles.retryLink}>
+            <Text style={styles.retryText}>Tentar de novo</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       {student?.className ? (
         <View style={styles.card}>
@@ -165,7 +184,15 @@ export default function TurmaScreen() {
             </View>
           ))}
         </View>
-      ) : null}
+      ) : (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Solicitações e Convites</Text>
+          <Text style={styles.muted}>
+            Nenhuma solicitação pendente. Se o professor convidou você por
+            e-mail, confira se entrou com a mesma conta aqui no app.
+          </Text>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -231,4 +258,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   rejectText: { color: colors.muted, fontWeight: "600" },
+  errorBox: {
+    backgroundColor: "#fef2f2",
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: "#fecaca",
+  },
+  errorText: { color: "#991b1b", fontSize: 14, textAlign: "center" },
+  retryLink: { marginTop: spacing.sm, alignItems: "center" },
+  retryText: { color: colors.primary, fontWeight: "600" },
 });

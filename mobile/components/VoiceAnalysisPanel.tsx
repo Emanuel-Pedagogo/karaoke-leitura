@@ -11,6 +11,7 @@ import {
   fetchPrivacyStatus,
 } from "@/lib/api";
 import { formatApiError } from "@/lib/format-api-error";
+import { isDeviceOffline, isLikelyNetworkError } from "@/lib/network";
 import { colors, radius, spacing } from "@/lib/theme";
 
 export type AiEvaluationPayload = {
@@ -45,6 +46,7 @@ type Props = {
   autoAnalyze?: boolean;
   onSuccess: (payload: AiEvaluationPayload) => void;
   onError: (message: string) => void;
+  onOfflineSave?: (uri: string) => Promise<void>;
 };
 
 const SCORE_LABELS: Record<string, string> = {
@@ -62,22 +64,38 @@ export function VoiceAnalysisPanel({
   autoAnalyze = true,
   onSuccess,
   onError,
+  onOfflineSave,
 }: Props) {
   const [loading, setLoading] = useState(false);
   const [payload, setPayload] = useState<AiEvaluationPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isOfflineSaved, setIsOfflineSaved] = useState(false);
   const ranRef = useRef(false);
 
   useEffect(() => {
     ranRef.current = false;
     setPayload(null);
     setError(null);
+    setIsOfflineSaved(false);
   }, [attemptKey]);
+
+  async function saveOffline(uri: string) {
+    if (!onOfflineSave) {
+      throw new Error("Você está offline. Conecte-se à internet para avaliar a leitura.");
+    }
+    await onOfflineSave(uri);
+    setIsOfflineSaved(true);
+  }
 
   async function analyzeUri(uri: string) {
     setLoading(true);
     setError(null);
     try {
+      if (await isDeviceOffline()) {
+        await saveOffline(uri);
+        return;
+      }
+
       const privacy = await fetchPrivacyStatus();
       if (!privacy.hasVoiceConsent) {
         const msg =
@@ -122,9 +140,23 @@ export function VoiceAnalysisPanel({
       setPayload(data);
       onSuccess(data);
     } catch (e) {
-      const msg = formatApiError(
-        e instanceof Error ? e.message : "Não foi possível analisar com o Gemini",
-      );
+      const raw = e instanceof Error ? e.message : "Não foi possível analisar com o Gemini";
+      if (onOfflineSave && isLikelyNetworkError(raw)) {
+        try {
+          await saveOffline(uri);
+          return;
+        } catch (offlineError) {
+          const msg = formatApiError(
+            offlineError instanceof Error
+              ? offlineError.message
+              : "Erro ao salvar leitura offline.",
+          );
+          setError(msg);
+          onError(msg);
+          return;
+        }
+      }
+      const msg = formatApiError(raw);
       setError(msg);
       onError(msg);
     } finally {
@@ -154,6 +186,17 @@ export function VoiceAnalysisPanel({
     return (
       <View style={styles.wrap}>
         <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
+
+  if (isOfflineSaved) {
+    return (
+      <View style={styles.wrap}>
+        <Text style={styles.title}>Leitura salva!</Text>
+        <Text style={styles.summary}>
+          Você está offline. Sua leitura foi salva localmente e será avaliada pela IA assim que você se conectar à internet.
+        </Text>
       </View>
     );
   }

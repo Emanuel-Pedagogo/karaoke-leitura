@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Link, useRouter } from "expo-router";
 import { API_URL } from "@/lib/config";
+import { setClassCode as persistClassCode, clearClassCode } from "@/lib/class-session";
 import { setAuthToken } from "@/lib/session";
 import { colors, radius, spacing } from "@/lib/theme";
 
@@ -45,6 +46,7 @@ export default function LoginScreen() {
         throw new Error("No celular, use uma conta de aluno.");
       }
       await setAuthToken(data.token);
+      await clearClassCode();
       router.replace("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao entrar");
@@ -100,6 +102,7 @@ export default function LoginScreen() {
       if (!res.ok || !data.token) {
         throw new Error(data.error ?? "Não foi possível entrar");
       }
+      await persistClassCode(classCode);
       await setAuthToken(data.token);
       router.replace("/");
     } catch (err) {

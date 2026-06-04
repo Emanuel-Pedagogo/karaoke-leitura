@@ -1,6 +1,10 @@
+import { useEffect } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import NetInfo from "@react-native-community/netinfo";
 import { HeaderLogoutButton } from "@/components/HeaderLogoutButton";
+import { getDb } from "@/lib/db";
+import { syncPendingSessions } from "@/lib/sync";
 import { colors } from "@/lib/theme";
 
 const loggedInHeader = {
@@ -8,6 +12,20 @@ const loggedInHeader = {
 };
 
 export default function RootLayout() {
+  useEffect(() => {
+    void getDb();
+    void syncPendingSessions();
+
+    // Listen for network changes to sync when coming back online
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      if (state.isConnected) {
+        void syncPendingSessions();
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   return (
     <>
       <StatusBar style="dark" />
@@ -39,6 +57,10 @@ export default function RootLayout() {
         <Stack.Screen
           name="dados"
           options={{ title: "Meus dados", ...loggedInHeader }}
+        />
+        <Stack.Screen
+          name="trocar-aluno"
+          options={{ title: "Próximo aluno", ...loggedInHeader }}
         />
         <Stack.Screen
           name="leitura/[textId]"

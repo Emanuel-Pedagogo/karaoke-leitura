@@ -32,13 +32,16 @@ import {
   saveReadingSession,
   type ReadingText,
 } from "@/lib/api";
+import { persistPendingReading } from "@/lib/offline-audio";
+import { isDeviceOffline } from "@/lib/network";
+import { hasClassSession } from "@/lib/class-session";
 import { colors, radius, spacing } from "@/lib/theme";
 
 type Phase = "ready" | "reading" | "analyzing" | "done";
 
 export default function ReadingScreen() {
   const router = useRouter();
-  const { textId } = useLocalSearchParams<{ textId: string }>();
+  const { textId, fresh } = useLocalSearchParams<{ textId: string; fresh?: string }>();
   const [text, setText] = useState<ReadingText | null>(null);
   const [studentId, setStudentId] = useState<string | undefined>();
   const [studentName, setStudentName] = useState("Estudante");
@@ -57,6 +60,8 @@ export default function ReadingScreen() {
     typeof calculateSessionMetrics
   > | null>(null);
   const [hasVoiceConsent, setHasVoiceConsent] = useState(false);
+  const [savedOffline, setSavedOffline] = useState(false);
+  const [classSession, setClassSession] = useState(false);
   const finishStartedRef = useRef(false);
   const {
     isRecording,
@@ -73,14 +78,24 @@ export default function ReadingScreen() {
       if (!textId) return;
       setLoading(true);
       setError(null);
+      if (fresh) {
+        finishStartedRef.current = false;
+        resetRecording();
+        setPhase("ready");
+        setMetrics(null);
+        setAiFeedback(null);
+        setAnalysisError(null);
+        setSavedOffline(false);
+        setIsPlaying(false);
+        setAttemptKey((k) => k + 1);
+        durationRef.current = 0;
+        startRef.current = null;
+      }
       try {
         const [textData, studentData, privacy] = await Promise.all([
           fetchText(textId),
           fetchStudentProfile(),
-          fetchPrivacyStatus().catch(() => ({
-            needsPrivacy: false,
-            hasVoiceConsent: false,
-          })),
+          fetchPrivacyStatus(),
         ]);
         setText(textData);
         setStudentId(studentData?.id);
@@ -108,7 +123,11 @@ export default function ReadingScreen() {
     }
 
     void loadScreenData();
-  }, [textId]);
+  }, [textId, fresh, resetRecording]);
+
+  useEffect(() => {
+    void hasClassSession().then(setClassSession);
+  }, []);
 
   const handleStart = async () => {
     if (!hasVoiceConsent) return;
@@ -128,11 +147,54 @@ export default function ReadingScreen() {
       durationRef.current = Math.round((Date.now() - startRef.current) / 1000);
     }
     await new Promise((resolve) => setTimeout(resolve, 400));
+
+    let uri = recordingUri;
     if (isRecording) {
-      await stopRecording();
+      uri = (await stopRecording()) ?? null;
     }
+
+    if (!uri) {
+      setError("Não foi possível finalizar a gravação. Tente novamente.");
+      setPhase("ready");
+      return;
+    }
+
+    if (!text) return;
+
+    if (await isDeviceOffline()) {
+      try {
+        await persistPendingReading({
+          uri,
+          textId: text.id,
+          durationSeconds: durationRef.current,
+          speedMultiplier: speed,
+        });
+        setSavedOffline(true);
+        setPhase("done");
+      } catch {
+        setError("Erro ao salvar leitura offline.");
+        setPhase("ready");
+      }
+      return;
+    }
+
     setPhase("analyzing");
-  }, [isRecording, speed, stopRecording]);
+  }, [isRecording, recordingUri, speed, stopRecording, text]);
+
+  const handleOfflineSave = useCallback(
+    async (uri: string) => {
+      if (!text) return;
+      await persistPendingReading({
+        uri,
+        textId: text.id,
+        durationSeconds: durationRef.current,
+        speedMultiplier: speed,
+      });
+      setSavedOffline(true);
+      setPhase("done");
+    },
+    [text, speed],
+  );
 
   const saveAfterAi = useCallback(
     async (payload: AiEvaluationPayload) => {
@@ -186,6 +248,7 @@ export default function ReadingScreen() {
     setMetrics(null);
     setAiFeedback(null);
     setAnalysisError(null);
+    setSavedOffline(false);
     setAttemptKey((k) => k + 1);
     durationRef.current = 0;
     startRef.current = null;
@@ -289,6 +352,7 @@ export default function ReadingScreen() {
                 void saveAfterAi(payload);
               }}
               onError={setAnalysisError}
+              onOfflineSave={(uri) => handleOfflineSave(uri)}
             />
           ) : (
             <Text style={styles.voiceHint}>Finalizando gravação…</Text>
@@ -299,6 +363,28 @@ export default function ReadingScreen() {
               style={[styles.secondaryButton, { marginTop: spacing.md }]}
             >
               <Text style={styles.secondaryButtonText}>Tentar novamente</Text>
+            </Pressable>
+          ) : null}
+        </Card>
+      ) : null}
+
+      {phase === "done" && savedOffline && !metrics ? (
+        <Card style={styles.resultCard}>
+          <Text style={styles.resultEmoji}>Leitura salva!</Text>
+          <Text style={styles.voiceHint}>
+            Você está offline. Sua leitura foi salva localmente e será avaliada pela IA assim que você se conectar à internet.
+          </Text>
+          <Pressable onPress={() => router.replace("/home")} style={styles.primaryButton}>
+            <Text style={styles.primaryButtonText}>Voltar ao início</Text>
+          </Pressable>
+          {classSession ? (
+            <Pressable
+              onPress={() =>
+                router.push(`/trocar-aluno?returnTo=${encodeURIComponent(`/leitura/${text.id}`)}`)
+              }
+              style={styles.secondaryButton}
+            >
+              <Text style={styles.secondaryButtonText}>Próximo aluno →</Text>
             </Pressable>
           ) : null}
         </Card>
@@ -336,8 +422,20 @@ export default function ReadingScreen() {
           <Pressable onPress={handleTryAgain} style={styles.secondaryButton}>
             <Text style={styles.secondaryButtonText}>Tentar novamente</Text>
           </Pressable>
-          <Pressable onPress={() => router.replace("/home")} style={styles.primaryButton}>
-            <Text style={styles.primaryButtonText}>Voltar ao início</Text>
+          {classSession ? (
+            <Pressable
+              onPress={() =>
+                router.push(`/trocar-aluno?returnTo=${encodeURIComponent(`/leitura/${text.id}`)}`)
+              }
+              style={styles.primaryButton}
+            >
+              <Text style={styles.primaryButtonText}>Próximo aluno →</Text>
+            </Pressable>
+          ) : null}
+          <Pressable onPress={() => router.replace("/home")} style={classSession ? styles.secondaryButton : styles.primaryButton}>
+            <Text style={classSession ? styles.secondaryButtonText : styles.primaryButtonText}>
+              Voltar ao início
+            </Text>
           </Pressable>
         </Card>
       ) : null}

@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { submitPrivacyConsent } from "@/lib/api";
+import { cachePrivacyStatus } from "@/lib/privacy-cache";
 import { API_URL } from "@/lib/config";
 import { clearAuthToken } from "@/lib/session";
 import { colors, radius, spacing } from "@/lib/theme";
@@ -37,6 +38,10 @@ export default function ConsentimentoScreen() {
         acceptPrivacy,
         acceptVoice,
         guardianConfirmed: acceptVoice ? guardianConfirmed : false,
+      });
+      await cachePrivacyStatus({
+        needsPrivacy: false,
+        hasVoiceConsent: acceptVoice,
       });
       router.replace("/home");
     } catch (e) {
