@@ -47,13 +47,6 @@ type Props = {
 
 type Phase = "ready" | "reading" | "analyzing" | "done";
 
-function createClientSessionId() {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-  return `${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
-}
-
 export function ReadingSessionClient({
   text,
   studentId,
@@ -83,7 +76,6 @@ export function ReadingSessionClient({
   const startRef = useRef<number | null>(null);
   const durationRef = useRef(0);
   const finishStartedRef = useRef(false);
-  const clientSessionIdRef = useRef(createClientSessionId());
 
   const speech = useSpeechRecording(recordingActive && hasVoiceConsent);
 
@@ -124,7 +116,7 @@ export function ReadingSessionClient({
       setRecordingActive(false);
       setPhase("analyzing");
     }, 400);
-  }, [speed]);
+  }, []);
 
   const saveSession = useCallback(
     async (evaluation: GeminiEvaluationResult) => {
@@ -155,7 +147,6 @@ export function ReadingSessionClient({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             studentId,
-            clientSessionId: clientSessionIdRef.current,
             textId: text.id,
             durationSeconds: duration,
             speedMultiplier: speed,
@@ -203,7 +194,6 @@ export function ReadingSessionClient({
     setAttemptKey((k) => k + 1);
     durationRef.current = 0;
     startRef.current = null;
-    clientSessionIdRef.current = createClientSessionId();
   };
 
   return (
