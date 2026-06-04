@@ -1,6 +1,7 @@
 import { TextDifficulty } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { jsonWithCors, optionsWithCors } from "@/lib/api-cors";
+import { getSessionFromRequest } from "@/lib/auth";
 import { countWords, TEXT_DIFFICULTIES } from "@/lib/text-utils";
 
 export async function OPTIONS() {
@@ -41,6 +42,14 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const session = await getSessionFromRequest(request);
+    if (
+      !session ||
+      (session.role !== "TEACHER" && session.role !== "COORDINATOR")
+    ) {
+      return jsonWithCors({ error: "Não autorizado" }, { status: 401 });
+    }
+
     const { id } = await params;
     const body = await request.json();
     const { title, content, difficulty, gradeHint } = body;
@@ -75,10 +84,18 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const session = await getSessionFromRequest(request);
+    if (
+      !session ||
+      (session.role !== "TEACHER" && session.role !== "COORDINATOR")
+    ) {
+      return jsonWithCors({ error: "Não autorizado" }, { status: 401 });
+    }
+
     const { id } = await params;
     await prisma.readingText.delete({ where: { id } });
     return jsonWithCors({ ok: true });

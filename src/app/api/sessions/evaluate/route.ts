@@ -3,6 +3,7 @@ import { getSessionFromRequest } from "@/lib/auth";
 import { evaluateReadingWithGemini } from "@/lib/gemini";
 import { studentHasVoiceConsent } from "@/lib/voice-consent";
 import { prisma } from "@/lib/prisma";
+import { validateAudioUploadSize } from "@/lib/audio-upload-limits";
 
 export async function OPTIONS() {
   return optionsWithCors();
@@ -32,11 +33,16 @@ export async function POST(request: Request) {
     const audioFile = formData.get("audio") as File | null;
     const textId = formData.get("textId") as string | null;
 
-    if (!audioFile || !textId) {
+    if (!audioFile || !(audioFile instanceof Blob) || !textId) {
       return jsonWithCors(
         { error: "Áudio e textId são obrigatórios." },
         { status: 400 }
       );
+    }
+
+    const uploadError = validateAudioUploadSize(audioFile);
+    if (uploadError) {
+      return jsonWithCors(uploadError, { status: 413 });
     }
 
     // 4. Buscar o texto de referência no banco de dados

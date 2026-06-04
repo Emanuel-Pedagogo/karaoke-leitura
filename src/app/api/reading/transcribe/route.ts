@@ -1,6 +1,7 @@
 import { transcribeAudioBuffer, isServerAsrAvailable } from "@/lib/asr";
 import { jsonWithCors, optionsWithCors } from "@/lib/api-cors";
 import { getSessionFromRequest } from "@/lib/auth";
+import { validateAudioUploadSize } from "@/lib/audio-upload-limits";
 import { studentHasVoiceConsent } from "@/lib/voice-consent";
 
 export async function OPTIONS() {
@@ -36,6 +37,11 @@ export async function POST(request: Request) {
     const file = form.get("audio");
     if (!file || !(file instanceof Blob)) {
       return jsonWithCors({ error: "Arquivo de áudio obrigatório" }, { status: 400 });
+    }
+
+    const uploadError = validateAudioUploadSize(file);
+    if (uploadError) {
+      return jsonWithCors(uploadError, { status: 413 });
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());

@@ -1,6 +1,7 @@
 import { TextDifficulty } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { jsonWithCors, optionsWithCors } from "@/lib/api-cors";
+import { getSessionFromRequest } from "@/lib/auth";
 import { countWords, TEXT_DIFFICULTIES } from "@/lib/text-utils";
 
 export async function OPTIONS() {
@@ -9,6 +10,14 @@ export async function OPTIONS() {
 
 export async function POST(request: Request) {
   try {
+    const session = await getSessionFromRequest(request);
+    if (
+      !session ||
+      (session.role !== "TEACHER" && session.role !== "COORDINATOR")
+    ) {
+      return jsonWithCors({ error: "Não autorizado" }, { status: 401 });
+    }
+
     const body = await request.json();
     const { title, content, difficulty, gradeHint } = body;
 

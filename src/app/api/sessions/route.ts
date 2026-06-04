@@ -39,7 +39,7 @@ export async function POST(request: Request) {
       return jsonWithCors({ error: "Aluno inválido" }, { status: 403 });
     }
 
-    if (!textId) {
+    if (typeof textId !== "string" || !textId) {
       return jsonWithCors({ error: "Dados inválidos" }, { status: 400 });
     }
 
