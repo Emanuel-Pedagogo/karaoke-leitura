@@ -251,7 +251,10 @@ export function ReadingSessionClient({
           ) : (
             <p className="text-sm text-muted">
               Para ler com avaliação por IA,{" "}
-              <Link href="/aluno/consentimento" className="text-primary underline">
+              <Link
+                href={`/aluno/consentimento?voz=1&returnTo=${encodeURIComponent(`/aluno/leitura/${text.id}`)}`}
+                className="text-primary underline"
+              >
                 autorize o microfone na privacidade
               </Link>
               .
