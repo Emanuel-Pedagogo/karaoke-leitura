@@ -5,10 +5,20 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 
-export function PrivacyConsentForm() {
+type PrivacyConsentFormProps = {
+  initialAcceptPrivacy?: boolean;
+  focusVoice?: boolean;
+  redirectTo?: string;
+};
+
+export function PrivacyConsentForm({
+  initialAcceptPrivacy = false,
+  focusVoice = false,
+  redirectTo = "/aluno",
+}: PrivacyConsentFormProps) {
   const router = useRouter();
-  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
-  const [acceptVoice, setAcceptVoice] = useState(false);
+  const [acceptPrivacy, setAcceptPrivacy] = useState(initialAcceptPrivacy);
+  const [acceptVoice, setAcceptVoice] = useState(focusVoice);
   const [guardianConfirmed, setGuardianConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -37,7 +47,7 @@ export function PrivacyConsentForm() {
         }
         throw new Error(data.error ?? "Erro ao salvar");
       }
-      router.push("/aluno");
+      router.push(redirectTo);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro");
@@ -49,10 +59,11 @@ export function PrivacyConsentForm() {
   return (
     <Card className="max-w-lg mx-auto space-y-6">
       <header className="space-y-2">
-        <h1 className="text-2xl font-bold">Privacidade e consentimento</h1>
+        <h1 className="text-2xl font-bold">{focusVoice ? "Autorizar microfone" : "Privacidade e consentimento"}</h1>
         <p className="text-sm text-muted">
-          Em conformidade com a LGPD (Lei 13.709/2018). A escola é a controladora
-          dos dados; esta plataforma trata dados apenas para fins educacionais.
+          {focusVoice
+            ? "Autorize o microfone para usar a avaliação por IA e volte para a leitura."
+            : "Em conformidade com a LGPD (Lei 13.709/2018). A escola é a controladora dos dados; esta plataforma trata dados apenas para fins educacionais."}
         </p>
       </header>
 
