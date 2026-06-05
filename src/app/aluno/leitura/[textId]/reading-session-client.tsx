@@ -55,6 +55,13 @@ function createClientSessionId() {
 
 type Phase = "ready" | "reading" | "analyzing" | "done";
 
+function createClientSessionId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
+}
+
 export function ReadingSessionClient({
   text,
   studentId,
