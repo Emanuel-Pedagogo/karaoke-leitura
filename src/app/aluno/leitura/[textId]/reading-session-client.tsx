@@ -53,7 +53,7 @@ function createClientSessionId() {
   return `${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
 }
 
-type Phase = "ready" | "reading" | "analyzing" | "done";
+type Phase = "ready" | "countdown" | "reading" | "analyzing" | "done";
 
 export function ReadingSessionClient({
   text,
@@ -66,6 +66,7 @@ export function ReadingSessionClient({
   classSession = false,
 }: Props) {
   const [phase, setPhase] = useState<Phase>("ready");
+  const [countdown, setCountdown] = useState(3);
   const [speed, setSpeed] = useState(initialSpeed);
   const [isPlaying, setIsPlaying] = useState(false);
   const [recordingActive, setRecordingActive] = useState(false);
@@ -105,16 +106,36 @@ export function ReadingSessionClient({
     return () => window.clearTimeout(timeout);
   }, [phase, speech.audioBlob]);
 
-  const handleStart = () => {
-    if (!hasVoiceConsent) return;
+  const beginReading = useCallback(() => {
     startRef.current = Date.now();
     finishStartedRef.current = false;
     setAnalysisError(null);
     setAiEvaluation(null);
     setAnalysisAudio(null);
+    speech.reset();
     setRecordingActive(true);
     setPhase("reading");
     setIsPlaying(true);
+  }, [speech]);
+
+  useEffect(() => {
+    if (phase !== "countdown") return;
+    if (countdown <= 0) {
+      beginReading();
+      return;
+    }
+    const timer = window.setTimeout(() => setCountdown((value) => value - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [beginReading, countdown, phase]);
+
+  const handleStart = () => {
+    if (!hasVoiceConsent) return;
+    finishStartedRef.current = false;
+    setAnalysisError(null);
+    setAiEvaluation(null);
+    setAnalysisAudio(null);
+    setCountdown(3);
+    setPhase("countdown");
   };
 
   const handleComplete = useCallback(() => {
@@ -196,6 +217,9 @@ export function ReadingSessionClient({
     finishStartedRef.current = false;
     speech.reset();
     setPhase("ready");
+    setCountdown(3);
+    setIsPlaying(false);
+    setRecordingActive(false);
     setMetrics(null);
     setGamification(null);
     setAiEvaluation(null);
@@ -220,7 +244,7 @@ export function ReadingSessionClient({
           <h1 className="text-2xl font-bold mt-1">{text.title}</h1>
           <p className="text-sm text-muted">{studentName}</p>
         </aside>
-        {(phase === "ready" || phase === "reading") && (
+        {(phase === "ready" || phase === "countdown" || phase === "reading") && (
           <label className="text-sm shrink-0 max-w-[11rem]">
             Velocidade: {speed.toFixed(1)}×
             <input
@@ -237,6 +261,16 @@ export function ReadingSessionClient({
       </header>
 
       <Card className="min-h-[200px] flex flex-col items-center justify-center gap-2">
+        {phase === "countdown" ? (
+          <div className="flex flex-col items-center gap-1 mb-2">
+            <p className="text-5xl font-bold text-primary tabular-nums">
+              {countdown}
+            </p>
+            <p className="text-sm text-muted text-center">
+              Prepare-se para ler em voz alta
+            </p>
+          </div>
+        ) : null}
         {phase === "reading" && recordingActive && (
           <p className="text-xs text-primary animate-pulse">
             Gravando sua leitura…
@@ -246,7 +280,7 @@ export function ReadingSessionClient({
           key={attemptKey}
           content={text.content}
           speed={speed}
-          isPlaying={isPlaying}
+          isPlaying={phase === "reading" && isPlaying}
           runKey={attemptKey}
           onComplete={handleComplete}
         />
