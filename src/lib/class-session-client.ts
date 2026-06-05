@@ -1,4 +1,7 @@
-import { CLASS_CODE_COOKIE, normalizeClassCode } from "@/lib/class-session";
+import {
+  CLASS_CODE_COOKIE,
+  normalizeClassCode,
+} from "@/lib/class-session-shared";
 
 export function getClassCodeClient(): string | null {
   if (typeof document === "undefined") return null;

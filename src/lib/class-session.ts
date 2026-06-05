@@ -1,10 +1,12 @@
+import "server-only";
+
 import { cookies } from "next/headers";
+import {
+  CLASS_CODE_COOKIE,
+  normalizeClassCode,
+} from "@/lib/class-session-shared";
 
-export const CLASS_CODE_COOKIE = "karaoke_class_code";
-
-export function normalizeClassCode(code: string) {
-  return code.trim().toUpperCase();
-}
+export { CLASS_CODE_COOKIE, normalizeClassCode };
 
 export async function getClassCodeFromCookies() {
   const cookieStore = await cookies();
