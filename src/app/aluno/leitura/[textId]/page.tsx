@@ -1,16 +1,21 @@
 import { notFound } from "next/navigation";
 import { averageWcpm, suggestKaraokeSpeed } from "@karaoke/shared";
 import { prisma } from "@/lib/prisma";
+import { hasClassSession } from "@/lib/class-session";
 import { requireStudentWithPrivacy } from "@/lib/privacy-guard";
 import { ReadingSessionClient } from "./reading-session-client";
 
 export default async function LeituraPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ textId: string }>;
+  searchParams: Promise<{ fresh?: string }>;
 }) {
   const { session, hasVoiceConsent } = await requireStudentWithPrivacy();
   const { textId } = await params;
+  const { fresh } = await searchParams;
+  const classSession = await hasClassSession();
   const text = await prisma.readingText.findUnique({ where: { id: textId } });
   if (!text) notFound();
 
@@ -31,6 +36,7 @@ export default async function LeituraPage({
 
   return (
     <ReadingSessionClient
+      key={fresh ?? text.id}
       text={{
         id: text.id,
         title: text.title,
@@ -43,6 +49,7 @@ export default async function LeituraPage({
       hasVoiceConsent={hasVoiceConsent}
       initialSpeed={speedSuggestion.speed}
       speedHint={speedSuggestion}
+      classSession={classSession}
     />
   );
 }

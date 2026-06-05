@@ -8,12 +8,16 @@ import {
   getStudentAchievements,
 } from "@/lib/student-data";
 import { Card } from "@/components/ui/card";
+import { ClassModeBanner } from "@/components/class-mode-banner";
+import { ClassModeExitButton } from "@/components/class-mode-exit-button";
+import { hasClassSession } from "@/lib/class-session";
 import { DIFFICULTY_LABELS, cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function AlunoHomePage() {
   const { session } = await requireStudentWithPrivacy();
+  const classSession = await hasClassSession();
   const student = await prisma.studentProfile.findUnique({
     where: { id: session.studentId },
     include: {
@@ -40,6 +44,10 @@ export default async function AlunoHomePage() {
 
   return (
     <article className="space-y-8">
+      {classSession ? (
+        <ClassModeBanner studentName={student.user.name} />
+      ) : null}
+
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Olá, {student.user.name}! 👋</h1>
@@ -190,6 +198,12 @@ export default async function AlunoHomePage() {
           ))}
         </ul>
       </section>
+
+      {classSession ? (
+        <p className="text-center">
+          <ClassModeExitButton />
+        </p>
+      ) : null}
 
       {student.sessions.length > 0 && (
         <section>

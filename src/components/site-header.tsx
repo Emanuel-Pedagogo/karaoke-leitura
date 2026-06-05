@@ -2,9 +2,12 @@ import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoutButton } from "@/components/logout-button";
 import { getSessionFromCookies } from "@/lib/auth";
+import { hasClassSession } from "@/lib/class-session";
 
 export async function SiteHeader() {
   const session = await getSessionFromCookies();
+  const classSession =
+    session?.role === "STUDENT" ? await hasClassSession() : false;
 
   return (
     <header className="border-b border-foreground/10 bg-card/80 backdrop-blur sticky top-0 z-50 max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-4 w-full">
@@ -13,9 +16,19 @@ export async function SiteHeader() {
       </Link>
       <nav className="flex items-center gap-4 text-sm">
         {session?.role === "STUDENT" && (
-          <Link href="/aluno" className="hover:text-primary transition-colors">
-            Aluno
-          </Link>
+          <>
+            <Link href="/aluno" className="hover:text-primary transition-colors">
+              Aluno
+            </Link>
+            {classSession ? (
+              <Link
+                href="/aluno/trocar-aluno"
+                className="hover:text-primary transition-colors font-semibold"
+              >
+                Próximo aluno
+              </Link>
+            ) : null}
+          </>
         )}
         {session?.role === "TEACHER" && (
           <Link

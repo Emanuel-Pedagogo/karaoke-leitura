@@ -129,9 +129,9 @@ function EntrarContent() {
     return (
       <article className="max-w-md mx-auto space-y-6 py-4">
         <header className="text-center space-y-1">
-          <h1 className="text-2xl font-bold">Entrar com código da turma</h1>
+          <h1 className="text-2xl font-bold">Celular compartilhado da turma</h1>
           <p className="text-sm text-muted">
-            Use o código que o professor passou e escolha seu nome.
+            Modo sala: digite o código da turma e escolha o aluno que vai ler.
           </p>
         </header>
         <Card>
@@ -257,9 +257,9 @@ function EntrarContent() {
             setMode("class");
             setError(null);
           }}
-          className="w-full text-sm text-muted hover:text-primary"
+          className="w-full py-3 rounded-xl border-2 border-primary text-primary font-bold hover:bg-primary/5 transition-colors"
         >
-          Tenho código da turma (sem senha)
+          Usar celular compartilhado da turma
         </button>
       ) : null}
 

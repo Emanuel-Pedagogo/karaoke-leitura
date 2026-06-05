@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 import Slider from "@react-native-community/slider";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import {
   averageWcpm,
   calculateSessionMetrics,
@@ -135,9 +135,11 @@ export default function ReadingScreen() {
     void loadScreenData();
   }, [textId, fresh, resetRecording]);
 
-  useEffect(() => {
-    void hasClassSession().then(setClassSession);
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      void hasClassSession().then(setClassSession);
+    }, []),
+  );
 
   const beginReading = useCallback(async () => {
     startRef.current = Date.now();
@@ -434,9 +436,9 @@ export default function ReadingScreen() {
               onPress={() =>
                 router.push(`/trocar-aluno?returnTo=${encodeURIComponent(`/leitura/${text.id}`)}`)
               }
-              style={styles.secondaryButton}
+              style={styles.primaryButton}
             >
-              <Text style={styles.secondaryButtonText}>Próximo aluno →</Text>
+              <Text style={styles.primaryButtonText}>Próximo aluno</Text>
             </Pressable>
           ) : null}
         </Card>
@@ -479,9 +481,9 @@ export default function ReadingScreen() {
               onPress={() =>
                 router.push(`/trocar-aluno?returnTo=${encodeURIComponent(`/leitura/${text.id}`)}`)
               }
-              style={styles.primaryButton}
+              style={[styles.primaryButton, styles.nextStudentButton]}
             >
-              <Text style={styles.primaryButtonText}>Próximo aluno →</Text>
+              <Text style={styles.primaryButtonText}>Próximo aluno</Text>
             </Pressable>
           ) : null}
           <Pressable onPress={() => router.replace("/home")} style={classSession ? styles.secondaryButton : styles.primaryButton}>
@@ -569,6 +571,10 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     paddingVertical: spacing.md,
     alignItems: "center",
+  },
+  nextStudentButton: {
+    paddingVertical: spacing.lg,
+    marginTop: spacing.sm,
   },
   disabled: {
     opacity: 0.5,

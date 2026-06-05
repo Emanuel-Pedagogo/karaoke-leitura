@@ -125,6 +125,26 @@ export default function HomeScreen() {
       style={styles.screen}
       contentContainerStyle={styles.content}
     >
+      {classSession ? (
+        <View style={styles.classBanner}>
+          <Text style={styles.classBannerTitle}>Modo sala ativo</Text>
+          <Text style={styles.classBannerText}>
+            Este celular está sendo usado por vários alunos da turma.
+          </Text>
+          <Text style={styles.classBannerStudent}>
+            Aluno atual: {student?.name ?? "—"}
+          </Text>
+          <Pressable
+            style={styles.classBannerButton}
+            onPress={() => router.push("/trocar-aluno")}
+          >
+            <Text style={styles.classBannerButtonText}>
+              Trocar aluno / Próximo aluno
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
+
       <Text style={styles.greeting}>
         Olá, {student?.name?.split(" ")[0] ?? "leitor"}!
       </Text>
@@ -259,22 +279,14 @@ export default function HomeScreen() {
         </Text>
       ) : null}
 
-      <Pressable
-        onPress={() =>
-          classSession
-            ? router.push("/trocar-aluno")
-            : confirmLogout(router)
-        }
-        style={classSession ? styles.nextStudentButton : styles.logoutButton}
-      >
-        <Text
-          style={
-            classSession ? styles.nextStudentText : styles.logoutText
-          }
+      {!classSession ? (
+        <Pressable
+          onPress={() => confirmLogout(router)}
+          style={styles.logoutButton}
         >
-          {classSession ? "Próximo aluno →" : "Trocar de aluno (sair)"}
-        </Text>
-      </Pressable>
+          <Text style={styles.logoutText}>Trocar de aluno (sair)</Text>
+        </Pressable>
+      ) : null}
 
       <AppVersion />
 
@@ -298,6 +310,43 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.background,
+  },
+  classBanner: {
+    backgroundColor: "#eff6ff",
+    borderColor: colors.primary,
+    borderWidth: 2,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+    gap: spacing.xs,
+  },
+  classBannerTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: colors.primary,
+  },
+  classBannerText: {
+    fontSize: 14,
+    color: "#1e40af",
+    lineHeight: 20,
+  },
+  classBannerStudent: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.foreground,
+    marginTop: spacing.xs,
+  },
+  classBannerButton: {
+    marginTop: spacing.sm,
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    alignItems: "center",
+  },
+  classBannerButtonText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 16,
   },
   greeting: {
     fontSize: 26,
@@ -489,20 +538,6 @@ const styles = StyleSheet.create({
   logoutText: {
     color: colors.foreground,
     fontSize: 16,
-    fontWeight: "700",
-  },
-  nextStudentButton: {
-    marginTop: spacing.xl,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    alignItems: "center",
-    alignSelf: "stretch",
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-  },
-  nextStudentText: {
-    color: "#fff",
-    fontSize: 18,
     fontWeight: "700",
   },
   logoutLink: {

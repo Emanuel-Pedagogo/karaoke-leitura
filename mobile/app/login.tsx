@@ -132,9 +132,9 @@ export default function LoginScreen() {
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.title}>Código da turma</Text>
+        <Text style={styles.title}>Celular compartilhado da turma</Text>
         <Text style={styles.subtitle}>
-          Digite o código que o professor passou e escolha seu nome.
+          Modo sala: digite o código da turma e escolha o aluno que vai ler.
         </Text>
 
         <TextInput
@@ -251,8 +251,13 @@ export default function LoginScreen() {
 
       <AppVersion />
 
-      <Pressable onPress={() => setUseClassCode(true)} style={styles.linkMuted}>
-        <Text style={styles.linkMutedText}>Tenho código da turma (sem senha)</Text>
+      <Pressable
+        onPress={() => setUseClassCode(true)}
+        style={styles.classModeButton}
+      >
+        <Text style={styles.classModeButtonText}>
+          Usar celular compartilhado da turma
+        </Text>
       </Pressable>
 
       <Link href="/cadastro" asChild>
@@ -318,8 +323,20 @@ const styles = StyleSheet.create({
   error: { color: "#b91c1c", marginTop: spacing.md, textAlign: "center" },
   link: { marginTop: spacing.lg, alignItems: "center" },
   linkText: { color: colors.primary, fontWeight: "600" },
-  linkMuted: { marginTop: spacing.md, alignItems: "center" },
-  linkMutedText: { color: colors.muted, fontSize: 14 },
+  classModeButton: {
+    marginTop: spacing.lg,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    alignItems: "center",
+  },
+  classModeButtonText: {
+    color: colors.primary,
+    fontWeight: "700",
+    fontSize: 16,
+    textAlign: "center",
+  },
   classHint: { fontSize: 14, color: colors.muted, marginBottom: spacing.md },
   className: { fontWeight: "700", color: colors.foreground },
   nameItem: {

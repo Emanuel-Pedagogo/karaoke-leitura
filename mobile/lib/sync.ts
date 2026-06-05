@@ -54,7 +54,15 @@ export async function syncPendingSessions() {
 
     for (const session of sessions) {
       try {
-        if (session.studentId && session.studentId !== student.id) {
+        if (!session.studentId) {
+          await markPendingSessionAttempt(
+            session.id,
+            "Leitura pendente sem aluno identificado. Troque para o aluno correto antes de sincronizar.",
+          );
+          continue;
+        }
+
+        if (session.studentId !== student.id) {
           await markPendingSessionAttempt(
             session.id,
             "Leitura pendente pertence a outro aluno. Troque para o aluno correto antes de sincronizar.",

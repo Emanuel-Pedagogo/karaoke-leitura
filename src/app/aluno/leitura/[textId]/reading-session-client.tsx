@@ -43,7 +43,15 @@ type Props = {
   hasVoiceConsent?: boolean;
   initialSpeed?: number;
   speedHint?: KaraokeSpeedSuggestion;
+  classSession?: boolean;
 };
+
+function createClientSessionId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
+}
 
 type Phase = "ready" | "reading" | "analyzing" | "done";
 
@@ -55,6 +63,7 @@ export function ReadingSessionClient({
   hasVoiceConsent = false,
   initialSpeed = 1,
   speedHint,
+  classSession = false,
 }: Props) {
   const [phase, setPhase] = useState<Phase>("ready");
   const [speed, setSpeed] = useState(initialSpeed);
@@ -76,6 +85,7 @@ export function ReadingSessionClient({
   const startRef = useRef<number | null>(null);
   const durationRef = useRef(0);
   const finishStartedRef = useRef(false);
+  const clientSessionIdRef = useRef(createClientSessionId());
 
   const speech = useSpeechRecording(recordingActive && hasVoiceConsent);
 
@@ -147,6 +157,7 @@ export function ReadingSessionClient({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             studentId,
+            clientSessionId: clientSessionIdRef.current,
             textId: text.id,
             durationSeconds: duration,
             speedMultiplier: speed,
@@ -194,7 +205,10 @@ export function ReadingSessionClient({
     setAttemptKey((k) => k + 1);
     durationRef.current = 0;
     startRef.current = null;
+    clientSessionIdRef.current = createClientSessionId();
   };
+
+  const nextStudentHref = `/aluno/trocar-aluno?returnTo=${encodeURIComponent(`/aluno/leitura/${text.id}`)}`;
 
   return (
     <article className="space-y-6">
@@ -346,20 +360,34 @@ export function ReadingSessionClient({
                   comboStreak={gamification.comboStreak}
                 />
               )}
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <button
-                  type="button"
-                  onClick={handleTryAgain}
-                  className="px-6 py-2 rounded-lg border border-primary text-primary font-medium"
-                >
-                  Tentar novamente
-                </button>
-                <Link
-                  href="/aluno"
-                  className="inline-block px-6 py-2 rounded-lg bg-primary text-white"
-                >
-                  Voltar ao início
-                </Link>
+              <div className="flex flex-col gap-3 justify-center">
+                {classSession ? (
+                  <Link
+                    href={nextStudentHref}
+                    className="inline-block w-full py-4 rounded-xl bg-primary text-white text-lg font-bold text-center hover:bg-primary-hover"
+                  >
+                    Próximo aluno
+                  </Link>
+                ) : null}
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <button
+                    type="button"
+                    onClick={handleTryAgain}
+                    className="px-6 py-2 rounded-lg border border-primary text-primary font-medium"
+                  >
+                    Tentar novamente
+                  </button>
+                  <Link
+                    href="/aluno"
+                    className={`inline-block px-6 py-2 rounded-lg text-center ${
+                      classSession
+                        ? "border border-primary text-primary font-medium"
+                        : "bg-primary text-white"
+                    }`}
+                  >
+                    Voltar ao início
+                  </Link>
+                </div>
               </div>
             </>
           )}

@@ -6,6 +6,7 @@ import {
   verifyPassword,
 } from "@/lib/auth";
 import { rateLimitByRequest } from "@/lib/rate-limit";
+import { clearClassCodeCookieOptions } from "@/lib/class-session";
 
 export async function POST(request: Request) {
   try {
@@ -49,6 +50,9 @@ export async function POST(request: Request) {
       token,
     });
     response.cookies.set(sessionCookieOptions(token));
+    if (user.role === "STUDENT") {
+      response.cookies.set(clearClassCodeCookieOptions());
+    }
     return response;
   } catch (error) {
     console.error(error);

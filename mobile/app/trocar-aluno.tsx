@@ -15,7 +15,11 @@ import {
   switchToStudent,
   type ClassStudent,
 } from "@/lib/class-session";
+import { isDeviceOffline } from "@/lib/network";
 import { colors, radius, spacing } from "@/lib/theme";
+
+const OFFLINE_CLASS_ERROR =
+  "Não foi possível buscar alunos da turma. Verifique a conexão.";
 
 export default function TrocarAlunoScreen() {
   const router = useRouter();
@@ -39,6 +43,11 @@ export default function TrocarAlunoScreen() {
       }
       setClassCode(code);
 
+      if (await isDeviceOffline()) {
+        setError(OFFLINE_CLASS_ERROR);
+        return;
+      }
+
       const [classData, profile] = await Promise.all([
         fetchClassStudents(code),
         fetchStudentProfile().catch(() => null),
@@ -47,9 +56,13 @@ export default function TrocarAlunoScreen() {
       setStudents(classData.students);
       setCurrentStudentId(profile?.id ?? null);
     } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "Não foi possível carregar a turma",
-      );
+      if (await isDeviceOffline()) {
+        setError(OFFLINE_CLASS_ERROR);
+      } else {
+        setError(
+          e instanceof Error ? e.message : OFFLINE_CLASS_ERROR,
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -124,12 +137,12 @@ export default function TrocarAlunoScreen() {
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
     >
-      <Text style={styles.title}>Quem vai ler agora?</Text>
+      <Text style={styles.title}>Escolha o próximo aluno</Text>
       {className ? (
         <Text style={styles.subtitle}>Turma: {className}</Text>
       ) : null}
       <Text style={styles.hint}>
-        Toque no nome do próximo aluno. Não é preciso sair da conta.
+        Toque no nome do aluno que vai ler agora. O celular continua na mesma turma.
       </Text>
 
       {error ? (

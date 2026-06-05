@@ -39,9 +39,9 @@ export function HeaderLogoutButton() {
       onLongPress={handleLongPress}
       style={styles.button}
       accessibilityRole="button"
-      accessibilityLabel={classSession ? "Trocar de aluno" : "Sair da conta"}
+      accessibilityLabel={classSession ? "Próximo aluno" : "Sair da conta"}
     >
-      <Text style={styles.label}>{classSession ? "Trocar" : "Sair"}</Text>
+      <Text style={styles.label}>{classSession ? "Próximo aluno" : "Sair"}</Text>
     </Pressable>
   );
 }

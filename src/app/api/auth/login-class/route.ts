@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSessionToken, sessionCookieOptions } from "@/lib/auth";
+import { classCodeCookieOptions } from "@/lib/class-session";
 import { rateLimitByRequest } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
@@ -54,6 +55,7 @@ export async function POST(request: Request) {
       token,
     });
     response.cookies.set(sessionCookieOptions(token));
+    response.cookies.set(classCodeCookieOptions(String(classCode)));
     return response;
   } catch (error) {
     console.error(error);

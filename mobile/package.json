@@ -7,9 +7,9 @@
     "start": "expo start --offline",
     "android": "expo start --offline --android",
     "ios": "expo start --ios",
-    "build:android": "node --use-system-ca ../node_modules/eas-cli/bin/run build --platform android --profile production",
-    "build:android:preview": "node --use-system-ca ../node_modules/eas-cli/bin/run build --platform android --profile preview",
-    "submit:android": "node --use-system-ca ../node_modules/eas-cli/bin/run submit --platform android --profile production"
+    "build:android": "node --use-system-ca ../node_modules/eas-cli/bin/run build --platform android --profile production --non-interactive",
+    "build:android:preview": "node --use-system-ca ../node_modules/eas-cli/bin/run build --platform android --profile preview --non-interactive",
+    "submit:android": "node --use-system-ca ../node_modules/eas-cli/bin/run submit --platform android --profile production --latest --non-interactive"
   },
   "dependencies": {
     "@karaoke/shared": "*",
