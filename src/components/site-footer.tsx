@@ -13,6 +13,10 @@ export function SiteFooter() {
           Privacidade
         </Link>
         {" · "}
+        <Link href="/feedback" className="text-primary hover:underline">
+          Feedback do piloto
+        </Link>
+        {" · "}
         {appVersion}
         {" · "}
         privacidade {PRIVACY_POLICY_VERSION}

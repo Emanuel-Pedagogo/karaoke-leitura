@@ -76,6 +76,16 @@ enum JoinRequestStatus {
 
 
 
+enum PilotFeedbackSource {
+
+  WEB
+
+  MOBILE
+
+}
+
+
+
 model School {
 
   id        String   @id @default(cuid())
@@ -443,6 +453,38 @@ model ClassJoinRequest {
 
 
   @@unique([studentId, classId])
+
+}
+
+
+
+model PilotFeedback {
+
+  id               String              @id @default(cuid())
+
+  userId           String?
+
+  studentId        String?
+
+  role             UserRole?
+
+  source           PilotFeedbackSource
+
+  appVersion       String?
+
+  screen           String?
+
+  category         String
+
+  message          String
+
+  internetQuality  String?
+
+  aiWorked         Boolean?
+
+  readingWorked    Boolean?
+
+  createdAt        DateTime            @default(now())
 
 }
 

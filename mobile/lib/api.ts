@@ -1,5 +1,11 @@
+import {
+  type PilotFeedbackCategory,
+  type PilotInternetQuality,
+  type PilotTriState,
+} from "@karaoke/shared";
 import { API_URL } from "./config";
 import { getCache, setCache } from "./db";
+import { fetchWithTimeout, parseResponseJson } from "./fetch-timeout";
 import { isDeviceOffline } from "./network";
 import { cachePrivacyStatus, type PrivacyStatus } from "./privacy-cache";
 import { clearAuthToken, getAuthToken } from "./session";
@@ -368,4 +374,42 @@ export async function saveReadingSession(payload: {
     body: JSON.stringify(payload),
   });
   return parseJson(response);
+}
+
+export type PilotFeedbackInput = {
+  category: PilotFeedbackCategory;
+  message: string;
+  internetQuality?: PilotInternetQuality;
+  aiWorked?: PilotTriState;
+  readingWorked?: PilotTriState;
+  appVersion?: string;
+  screen?: string;
+};
+
+export async function submitPilotFeedback(
+  payload: PilotFeedbackInput,
+): Promise<{ ok: true }> {
+  if (await isDeviceOffline()) {
+    throw new Error("Conecte-se à internet para enviar feedback.");
+  }
+
+  const response = await fetchWithTimeout(`${API_URL}/api/pilot-feedback`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(await authHeaders()),
+    },
+    body: JSON.stringify({
+      source: "MOBILE",
+      ...payload,
+    }),
+  });
+
+  const data = await parseResponseJson<{ ok?: boolean; error?: string }>(
+    response,
+  );
+  if (!response.ok) {
+    throw new Error(data.error ?? "Não foi possível enviar o feedback");
+  }
+  return { ok: true };
 }

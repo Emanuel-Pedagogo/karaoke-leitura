@@ -4,3 +4,4 @@ export * from "./gamification";
 export * from "./speech-alignment";
 export * from "./karaoke-speed";
 export * from "./karaoke-timing";
+export * from "./pilot-feedback";

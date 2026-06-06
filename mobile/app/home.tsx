@@ -279,6 +279,13 @@ export default function HomeScreen() {
         </Text>
       ) : null}
 
+      <Pressable
+        onPress={() => router.push("/feedback")}
+        style={styles.feedbackLink}
+      >
+        <Text style={styles.feedbackLinkText}>Enviar feedback do piloto</Text>
+      </Pressable>
+
       {!classSession ? (
         <Pressable
           onPress={() => confirmLogout(router)}
@@ -525,6 +532,16 @@ const styles = StyleSheet.create({
   errorText: { color: "#991b1b", textAlign: "center" },
   retryButton: { marginTop: spacing.sm, alignItems: "center" },
   retryText: { color: colors.primary, fontWeight: "600" },
+  feedbackLink: {
+    marginTop: spacing.lg,
+    alignItems: "center",
+    paddingVertical: spacing.sm,
+  },
+  feedbackLinkText: {
+    color: colors.primary,
+    fontSize: 15,
+    fontWeight: "600",
+  },
   logoutButton: {
     marginTop: spacing.xl,
     paddingVertical: spacing.md,

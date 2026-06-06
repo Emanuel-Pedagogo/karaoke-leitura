@@ -199,6 +199,15 @@ export default async function AlunoHomePage() {
         </ul>
       </section>
 
+      <p className="text-center">
+        <Link
+          href="/feedback"
+          className="text-sm text-primary font-semibold hover:underline"
+        >
+          Enviar feedback do piloto
+        </Link>
+      </p>
+
       {classSession ? (
         <p className="text-center">
           <ClassModeExitButton />

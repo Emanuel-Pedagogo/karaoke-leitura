@@ -66,6 +66,10 @@ export default function RootLayout() {
           name="leitura/[textId]"
           options={{ title: "Leitura", ...loggedInHeader }}
         />
+        <Stack.Screen
+          name="feedback"
+          options={{ title: "Feedback do piloto", ...loggedInHeader }}
+        />
       </Stack>
     </>
   );

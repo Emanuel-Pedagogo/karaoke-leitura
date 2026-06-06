@@ -10,7 +10,7 @@ Fazer o piloto funcionar bem para os 10 professores/pedagogos colaboradores, sem
 2. Testar primeiro com o próprio professor lendo como aluno.
 3. Só testar com alunos em pequena escala e de forma supervisionada.
 4. Não compartilhar código de turma/link fora do grupo do piloto.
-5. Registrar erros com print, celular usado, internet e o que estava fazendo.
+5. Registrar problemas pelo formulário **Enviar feedback do piloto** (site ou app), informando internet, se a IA/leitura funcionaram e o que aconteceu.
 
 ## O que observar
 
@@ -21,6 +21,13 @@ Fazer o piloto funcionar bem para os 10 professores/pedagogos colaboradores, sem
 - O app lida bem com internet ruim?
 - Leituras offline sincronizam no aluno correto?
 - O professor percebe valor pedagógico?
+
+## Como enviar feedback
+
+- **Web:** rodapé ou área do aluno → link *Feedback do piloto* (`/feedback`).
+- **App:** tela Início → *Enviar feedback do piloto*.
+- Campos: categoria, internet, IA/leitura (sim/não/às vezes) e descrição livre.
+- Os registros ficam no banco (`PilotFeedback`) para consulta posterior — sem painel público.
 
 ## O que não fazer agora
 
