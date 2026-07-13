@@ -1,9 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireTeacherSession } from "@/lib/auth-guard";
+import { getSessionFromCookies } from "@/lib/auth";
+import { getStudentIfManageable } from "@/lib/class-auth";
 import { getStudentEvolution } from "@/lib/pedagogy";
 import { EvolutionChart } from "@/components/evolution-chart";
+import { RemoveStudentButton } from "@/components/remove-student-button";
 import { Card } from "@/components/ui/card";
+
+export const dynamic = "force-dynamic";
 
 export default async function AlunoDetalhePage({
   params,
@@ -11,9 +16,14 @@ export default async function AlunoDetalhePage({
   params: Promise<{ studentId: string }>;
 }) {
   await requireTeacherSession();
-  const { studentId } = await params;
-  const data = await getStudentEvolution(studentId);
+  const session = await getSessionFromCookies();
+  if (!session) notFound();
 
+  const { studentId } = await params;
+  const managed = await getStudentIfManageable(session, studentId);
+  if (!managed) notFound();
+
+  const data = await getStudentEvolution(studentId);
   if (!data) notFound();
 
   const { student, sessions, weekly, totalSessions } = data;
@@ -22,15 +32,32 @@ export default async function AlunoDetalhePage({
     <article className="space-y-8">
       <header>
         <Link
-          href="/professor/evolucao"
+          href="/professor/alunos"
           className="text-sm text-primary hover:underline"
         >
-          ← Evolução da turma
+          ← Alunos
         </Link>
-        <h1 className="text-3xl font-bold mt-1">{student.user.name}</h1>
-        <p className="text-muted text-sm">
-          {student.class.name} · Nível {student.level} · {student.xp} XP
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-4 mt-1">
+          <div>
+            <h1 className="text-3xl font-bold">{student.user.name}</h1>
+            <p className="text-muted text-sm">
+              {student.class.name} · Nível {student.level} · {student.xp} XP
+            </p>
+            <p className="text-muted text-sm">{student.user.email}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/professor/aluno/${studentId}/editar`}
+              className="text-sm px-3 py-1 rounded border border-primary text-primary hover:bg-primary/10"
+            >
+              Editar
+            </Link>
+            <RemoveStudentButton
+              studentId={studentId}
+              studentName={student.user.name}
+            />
+          </div>
+        </div>
       </header>
 
       <section className="grid md:grid-cols-3 gap-4">
