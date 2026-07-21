@@ -5,6 +5,7 @@ import {
 import { jsonWithCors, optionsWithCors } from "@/lib/api-cors";
 import { prisma } from "@/lib/prisma";
 import { registerUser } from "@/lib/register-user";
+import { recordUsageEvent, UsageEventType } from "@/lib/usage-events";
 
 export async function OPTIONS() {
   return optionsWithCors();
@@ -40,6 +41,17 @@ export async function POST(request: Request) {
       role: user.role,
       studentId: user.student?.id,
       teacherId: user.teacher?.id,
+    });
+
+    await recordUsageEvent({
+      request,
+      session: {
+        userId: user.id,
+        studentId: user.student?.id,
+        role: user.role,
+      },
+      type: UsageEventType.REGISTER,
+      metadata: { role: user.role },
     });
 
     const response = jsonWithCors({

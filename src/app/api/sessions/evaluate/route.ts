@@ -3,15 +3,18 @@ import { getSessionFromRequest } from "@/lib/auth";
 import { evaluateReadingWithGemini } from "@/lib/gemini";
 import { studentHasVoiceConsent } from "@/lib/voice-consent";
 import { prisma } from "@/lib/prisma";
+import { recordUsageEvent, UsageEventType } from "@/lib/usage-events";
 
 export async function OPTIONS() {
   return optionsWithCors();
 }
 
 export async function POST(request: Request) {
+  let session: Awaited<ReturnType<typeof getSessionFromRequest>> = null;
+  let evaluatedTextId: string | null = null;
   try {
     // 1. Validar Autenticação
-    const session = await getSessionFromRequest(request);
+    session = await getSessionFromRequest(request);
     if (!session?.studentId) {
       return jsonWithCors({ error: "Não autorizado" }, { status: 401 });
     }
@@ -31,6 +34,7 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const audioFile = formData.get("audio") as File | null;
     const textId = formData.get("textId") as string | null;
+    evaluatedTextId = textId;
 
     if (!audioFile || !textId) {
       return jsonWithCors(
@@ -66,6 +70,13 @@ export async function POST(request: Request) {
       readingText.content
     );
 
+    await recordUsageEvent({
+      request,
+      session,
+      type: UsageEventType.AI_EVALUATION_OK,
+      metadata: { textId, audioBytes: audioFile.size, mimeType },
+    });
+
     // 6. Retornar os resultados da avaliação
     return jsonWithCors({
       success: true,
@@ -75,6 +86,12 @@ export async function POST(request: Request) {
     console.error("Erro na API de avaliação com IA:", e);
     const message =
       e instanceof Error ? e.message : "Erro ao processar o áudio com a IA.";
+    await recordUsageEvent({
+      request,
+      session,
+      type: UsageEventType.AI_EVALUATION_FAILED,
+      metadata: { textId: evaluatedTextId, message: message.slice(0, 300) },
+    });
     return jsonWithCors({ error: message }, { status: 500 });
   }
 }

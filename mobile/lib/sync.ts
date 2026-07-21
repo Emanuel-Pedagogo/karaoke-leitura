@@ -13,6 +13,7 @@ import {
 } from "@karaoke/shared";
 import { fetchText, fetchStudentProfile } from "./api";
 import { isDeviceOffline } from "./network";
+import { trackEvent } from "./telemetry";
 
 let isSyncing = false;
 let syncAgain = false;
@@ -45,6 +46,8 @@ export async function syncPendingSessions() {
   if (await isDeviceOffline()) return;
 
   isSyncing = true;
+  let syncedCount = 0;
+  let failedCount = 0;
   try {
     const sessions = await getPendingSessions();
     if (sessions.length === 0) return;
@@ -127,12 +130,20 @@ export async function syncPendingSessions() {
 
         await removePendingSession(session.id);
         await FileSystem.deleteAsync(session.audioUri, { idempotent: true });
+        syncedCount += 1;
       } catch (e) {
         console.error("Failed to sync session", session.id, e);
         await markPendingSessionAttempt(session.id, errorMessage(e));
+        failedCount += 1;
       }
     }
   } finally {
+    if (syncedCount > 0 || failedCount > 0) {
+      void trackEvent("OFFLINE_SYNC", {
+        synced: syncedCount,
+        failed: failedCount,
+      });
+    }
     isSyncing = false;
     if (syncAgain) {
       syncAgain = false;

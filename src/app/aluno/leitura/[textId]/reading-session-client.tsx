@@ -9,6 +9,7 @@ import { comboMultiplierFromStreak } from "@karaoke/shared";
 import { ReadingResultFeedback } from "@/components/reading-result-feedback";
 import { useSpeechRecording } from "@/hooks/use-speech-recording";
 import { calculateSessionMetrics } from "@/lib/reading-metrics";
+import { trackClientEvent } from "@/lib/usage-events-client";
 import type { GeminiEvaluationResult } from "@/lib/gemini";
 import {
   karaokeSpeedHint,
@@ -116,7 +117,8 @@ export function ReadingSessionClient({
     setRecordingActive(true);
     setPhase("reading");
     setIsPlaying(true);
-  }, [speech]);
+    trackClientEvent("READING_STARTED", { textId: text.id, speed });
+  }, [speech, text.id, speed]);
 
   useEffect(() => {
     if (phase !== "countdown") return;

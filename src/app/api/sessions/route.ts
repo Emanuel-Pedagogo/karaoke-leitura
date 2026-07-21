@@ -8,6 +8,7 @@ import { jsonWithCors, optionsWithCors } from "@/lib/api-cors";
 import { getSessionFromRequest } from "@/lib/auth";
 import { processAfterReading } from "@/lib/gamification";
 import { studentHasVoiceConsent } from "@/lib/voice-consent";
+import { recordUsageEvent, UsageEventType } from "@/lib/usage-events";
 
 export async function OPTIONS() {
   return optionsWithCors();
@@ -162,6 +163,21 @@ export async function POST(request: Request) {
     const profile = await prisma.studentProfile.findUnique({
       where: { id: studentId },
       select: { classId: true, comboStreak: true, level: true, xp: true },
+    });
+
+    await recordUsageEvent({
+      request,
+      session,
+      type: UsageEventType.READING_SAVED,
+      metadata: {
+        textId,
+        durationSeconds: duration,
+        accuracyPct: metrics.accuracyPct,
+        wcpm: metrics.wcpm,
+        speedMultiplier: normalizedSpeedMultiplier,
+        asrSource: allowVoice ? asrSource ?? null : null,
+        hasVoiceConsent: allowVoice,
+      },
     });
 
     const gamification = profile

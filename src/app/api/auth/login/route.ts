@@ -7,6 +7,7 @@ import {
 } from "@/lib/auth";
 import { rateLimitByRequest } from "@/lib/rate-limit";
 import { clearClassCodeCookieOptions } from "@/lib/class-session";
+import { recordUsageEvent, UsageEventType } from "@/lib/usage-events";
 
 export async function POST(request: Request) {
   try {
@@ -41,6 +42,16 @@ export async function POST(request: Request) {
       role: user.role,
       studentId: user.student?.id,
       teacherId: user.teacher?.id,
+    });
+
+    await recordUsageEvent({
+      request,
+      session: {
+        userId: user.id,
+        studentId: user.student?.id,
+        role: user.role,
+      },
+      type: UsageEventType.LOGIN,
     });
 
     const response = NextResponse.json({

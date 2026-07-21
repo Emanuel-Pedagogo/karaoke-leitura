@@ -39,6 +39,7 @@ import {
 } from "@/lib/offline-audio";
 import { isDeviceOffline } from "@/lib/network";
 import { hasClassSession } from "@/lib/class-session";
+import { trackEvent } from "@/lib/telemetry";
 import { colors, radius, spacing } from "@/lib/theme";
 
 type Phase = "ready" | "countdown" | "reading" | "analyzing" | "done";
@@ -147,7 +148,8 @@ export default function ReadingScreen() {
     await startRecording();
     setPhase("reading");
     setIsPlaying(true);
-  }, [resetRecording, startRecording]);
+    void trackEvent("READING_STARTED", { textId, speed });
+  }, [resetRecording, startRecording, textId, speed]);
 
   useEffect(() => {
     if (phase !== "countdown") return;

@@ -458,6 +458,60 @@ model ClassJoinRequest {
 
 
 
+enum UsageEventType {
+
+  LOGIN
+
+  REGISTER
+
+  READING_STARTED
+
+  READING_SAVED
+
+  AI_EVALUATION_OK
+
+  AI_EVALUATION_FAILED
+
+  OFFLINE_SYNC
+
+  APP_ERROR
+
+}
+
+
+
+model UsageEvent {
+
+  id         String              @id @default(cuid())
+
+  userId     String?
+
+  studentId  String?
+
+  role       UserRole?
+
+  source     PilotFeedbackSource
+
+  appVersion String?
+
+  type       UsageEventType
+
+  metadata   Json                @default("{}")
+
+  createdAt  DateTime            @default(now())
+
+
+
+  @@index([type])
+
+  @@index([userId])
+
+  @@index([createdAt])
+
+}
+
+
+
 model PilotFeedback {
 
   id               String              @id @default(cuid())
