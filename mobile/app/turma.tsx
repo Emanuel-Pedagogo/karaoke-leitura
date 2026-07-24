@@ -3,13 +3,13 @@ import {
   ActivityIndicator,
   Alert,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
+import { KeyboardAwareScrollView } from "@/components/KeyboardAwareScrollView";
 import {
   fetchStudentClassRequests,
   fetchStudentProfile,
@@ -104,7 +104,7 @@ export default function TurmaScreen() {
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <KeyboardAwareScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton}>
           <Text style={styles.backButtonText}>← Voltar</Text>
@@ -193,7 +193,7 @@ export default function TurmaScreen() {
           </Text>
         </View>
       )}
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

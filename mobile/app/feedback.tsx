@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -18,6 +17,7 @@ import {
   type PilotTriState,
 } from "@karaoke/shared";
 import { AppVersion } from "@/components/AppVersion";
+import { KeyboardAwareScrollView } from "@/components/KeyboardAwareScrollView";
 import { submitPilotFeedback } from "@/lib/api";
 import { appVersionLabel } from "@/lib/app-version";
 import { isDeviceOffline } from "@/lib/network";
@@ -85,7 +85,7 @@ export default function FeedbackScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
+    <KeyboardAwareScrollView contentContainerStyle={styles.content}>
       <Text style={styles.title}>Feedback do piloto</Text>
       <Text style={styles.muted}>
         Ajude a melhorar o Karaokê de Leitura durante o piloto fechado. Leva
@@ -225,12 +225,12 @@ export default function FeedbackScreen() {
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <AppVersion />
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.lg, paddingBottom: spacing.xl },
+  content: { padding: spacing.lg },
   centered: {
     flex: 1,
     alignItems: "center",

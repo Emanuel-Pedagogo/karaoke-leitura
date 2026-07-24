@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -10,6 +9,7 @@ import {
 } from "react-native";
 import { Link, useRouter } from "expo-router";
 import { AppVersion } from "@/components/AppVersion";
+import { KeyboardAwareScrollView } from "@/components/KeyboardAwareScrollView";
 import { API_URL } from "@/lib/config";
 import { setClassCode as persistClassCode, clearClassCode } from "@/lib/class-session";
 import { setAuthToken } from "@/lib/session";
@@ -128,10 +128,7 @@ export default function LoginScreen() {
 
   if (useClassCode) {
     return (
-      <ScrollView
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
-      >
+      <KeyboardAwareScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>Celular compartilhado da turma</Text>
         <Text style={styles.subtitle}>
           Modo sala: digite o código da turma e escolha o aluno que vai ler.
@@ -202,15 +199,12 @@ export default function LoginScreen() {
         <Pressable onPress={() => setUseClassCode(false)} style={styles.link}>
           <Text style={styles.linkText}>Entrar com e-mail e senha</Text>
         </Pressable>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     );
   }
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.container}
-      keyboardShouldPersistTaps="handled"
-    >
+    <KeyboardAwareScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Entrar</Text>
       <Text style={styles.subtitle}>Use o e-mail e a senha da sua conta.</Text>
 
@@ -271,12 +265,12 @@ export default function LoginScreen() {
           <Text style={styles.linkText}>← Voltar</Text>
         </Pressable>
       </Link>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, padding: spacing.lg, justifyContent: "center" },
+  container: { padding: spacing.lg, paddingTop: spacing.xl },
   title: {
     fontSize: 28,
     fontWeight: "700",

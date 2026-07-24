@@ -4,13 +4,13 @@ import {
   Alert,
   Linking,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
+import { KeyboardAwareScrollView } from "@/components/KeyboardAwareScrollView";
 import { API_URL } from "@/lib/config";
 import {
   deleteAccount,
@@ -132,7 +132,7 @@ export default function DadosScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
+    <KeyboardAwareScrollView contentContainerStyle={styles.content}>
       <Text style={styles.muted}>
         Exercite seus direitos previstos na Lei 13.709/2018 (LGPD).
       </Text>
@@ -222,12 +222,12 @@ export default function DadosScreen() {
           </View>
         )}
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xl },
+  content: { padding: spacing.lg, gap: spacing.md },
   centered: {
     flex: 1,
     alignItems: "center",

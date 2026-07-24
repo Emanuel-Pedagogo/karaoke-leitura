@@ -2,13 +2,12 @@ import { useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  View,
 } from "react-native";
 import { Link, useRouter } from "expo-router";
+import { KeyboardAwareScrollView } from "@/components/KeyboardAwareScrollView";
 import { registerAccount } from "@/lib/api";
 import { setAuthToken } from "@/lib/session";
 import { colors, radius, spacing } from "@/lib/theme";
@@ -52,10 +51,7 @@ export default function CadastroScreen() {
   }
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.container}
-      keyboardShouldPersistTaps="handled"
-    >
+    <KeyboardAwareScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Criar conta</Text>
       <Text style={styles.subtitle}>
         Preencha seus dados para começar a ler.
@@ -130,12 +126,12 @@ export default function CadastroScreen() {
           <Text style={styles.linkText}>← Voltar</Text>
         </Pressable>
       </Link>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, padding: spacing.lg, justifyContent: "center" },
+  container: { padding: spacing.lg, paddingTop: spacing.xl },
   title: {
     fontSize: 28,
     fontWeight: "700",

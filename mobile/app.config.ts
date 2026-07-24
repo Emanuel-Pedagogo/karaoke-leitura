@@ -3,7 +3,7 @@ import type { ExpoConfig } from "expo/config";
 const config: ExpoConfig = {
   name: "Karaokê de Leitura",
   slug: "karaoke-leitura",
-  version: "1.0.2",
+  version: "1.0.3",
   orientation: "portrait",
   scheme: "karaoke-leitura",
   userInterfaceStyle: "automatic",
@@ -20,8 +20,9 @@ const config: ExpoConfig = {
       backgroundColor: "#2563eb",
     },
     package: "br.edu.karaokeleitura.app",
-    versionCode: 13,
+    versionCode: 14,
     permissions: ["INTERNET", "RECORD_AUDIO", "MODIFY_AUDIO_SETTINGS"],
+    softwareKeyboardLayoutMode: "resize",
   },
   plugins: [
     "expo-router",
